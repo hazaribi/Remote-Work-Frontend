@@ -49,7 +49,7 @@ function Auth({ onLogin }) {
       <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <Logo size="xl" className="justify-center mb-8" />
+            <Logo size="lg" className="justify-center mb-6" />
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               {isLogin ? 'Welcome Back!' : 'Join RemoteSync'}
             </h2>
