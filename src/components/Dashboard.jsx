@@ -115,7 +115,7 @@ function Dashboard({ user, onWorkspaceSelect, currentWorkspace }) {
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
               <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4 animate-fade-in">
-                {getGreeting()}, {user.full_name}! 👋
+                {getGreeting()}, {user.full_name}! 🚀
               </h1>
               <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
                 Welcome to your collaborative workspace. Manage projects, communicate with your team, and achieve more together.
