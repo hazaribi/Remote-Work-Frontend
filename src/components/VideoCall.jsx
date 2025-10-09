@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Peer from 'peerjs';
 import io from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
-const PEER_HOST = process.env.REACT_APP_PEER_HOST || 'localhost';
-const PEER_PORT = process.env.REACT_APP_PEER_PORT || 9001;
+const SOCKET_URL = 'https://remote-work-backend.onrender.com';
+const PEER_HOST = 'remote-work-backend.onrender.com';
+const PEER_PORT = 443;
 
 function VideoCall({ workspaceId }) {
   const [peer, setPeer] = useState(null);
@@ -199,63 +199,137 @@ function VideoCall({ workspaceId }) {
   };
 
   return (
-    <div className="px-4 py-6 sm:px-0">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Video Call</h1>
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={startCall}
-            disabled={isCallActive}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
-          >
-            Start Call
-          </button>
-          <button
-            onClick={endCall}
-            disabled={!isCallActive}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-          >
-            End Call
-          </button>
-          <button
-            onClick={toggleMute}
-            disabled={!isCallActive}
-            className={`px-4 py-2 rounded-lg text-white disabled:opacity-50 ${
-              isMuted ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-600 hover:bg-yellow-700'
-            }`}
-          >
-            {isMuted ? 'Unmute' : 'Mute'}
-          </button>
-          <button
-            onClick={toggleVideo}
-            disabled={!isCallActive}
-            className={`px-4 py-2 rounded-lg text-white disabled:opacity-50 ${
-              isVideoOff ? 'bg-red-600 hover:bg-red-700' : 'bg-purple-600 hover:bg-purple-700'
-            }`}
-          >
-            {isVideoOff ? 'Turn On Video' : 'Turn Off Video'}
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Video Conference
+          </h1>
+          <p className="text-gray-600">Connect face-to-face with your team</p>
         </div>
+        
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
+          <div className="flex flex-wrap gap-4 mb-8 justify-center">
+            <button
+              onClick={startCall}
+              disabled={isCallActive}
+              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>Start Call</span>
+            </button>
+            
+            <button
+              onClick={endCall}
+              disabled={!isCallActive}
+              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l18 18" />
+              </svg>
+              <span>End Call</span>
+            </button>
+            
+            <button
+              onClick={toggleMute}
+              disabled={!isCallActive}
+              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+                isMuted 
+                  ? 'bg-gradient-to-r from-red-600 to-red-700' 
+                  : 'bg-gradient-to-r from-yellow-600 to-yellow-700'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isMuted ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                )}
+              </svg>
+              <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+            </button>
+            
+            <button
+              onClick={toggleVideo}
+              disabled={!isCallActive}
+              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+                isVideoOff 
+                  ? 'bg-gradient-to-r from-red-600 to-red-700' 
+                  : 'bg-gradient-to-r from-purple-600 to-purple-700'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {isVideoOff ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                )}
+              </svg>
+              <span>{isVideoOff ? 'Turn On Video' : 'Turn Off Video'}</span>
+            </button>
+          </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Local Video</h3>
-            <video
-              ref={localVideoRef}
-              autoPlay
-              muted
-              className="w-full h-64 bg-black rounded-lg"
-            />
+          <div className="grid lg:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <h3 className="text-lg font-semibold text-gray-900">Your Video</h3>
+              </div>
+              <div className="relative">
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
+                />
+                {!localStream && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
+                    <div className="text-center text-white">
+                      <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-sm opacity-75">Camera not active</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${currentCall ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <h3 className="text-lg font-semibold text-gray-900">Remote Video</h3>
+              </div>
+              <div className="relative">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
+                />
+                {!currentCall && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
+                    <div className="text-center text-white">
+                      <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <p className="text-sm opacity-75">Waiting for participant</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-2">Remote Video</h3>
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              className="w-full h-64 bg-black rounded-lg"
-            />
-          </div>
+          
+          {isCallActive && (
+            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-green-800 font-medium">Call is active</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
