@@ -5,7 +5,6 @@ import TaskBoard from './components/TaskBoard';
 import Chat from './components/Chat';
 import VideoCall from './components/VideoCall';
 import Whiteboard from './components/Whiteboard';
-import Logo from './components/Logo';
 import Footer from './components/Footer';
 
 function App() {
@@ -45,7 +44,9 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
             <div className="flex items-center space-x-4">
-              <Logo size="md" />
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                RemoteSync
+              </h1>
               {currentWorkspace && (
                 <div className="hidden sm:flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-200">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>

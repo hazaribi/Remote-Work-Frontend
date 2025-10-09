@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Logo from './Logo';
 import Footer from './Footer';
 
 const API_BASE = 'https://remote-work-backend.onrender.com/api';
@@ -49,10 +48,12 @@ function Auth({ onLogin }) {
       <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <Logo size="lg" className="justify-center mb-6" />
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              {isLogin ? 'Welcome Back!' : 'Join RemoteSync'}
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+              RemoteSync
             </h2>
+            <p className="text-lg font-medium text-gray-700 mb-2">
+              {isLogin ? 'Welcome Back!' : 'Join RemoteSync'}
+            </p>
             <p className="text-gray-600">
               {isLogin ? 'Sign in to your account to continue' : 'Create your account to get started'}
             </p>
