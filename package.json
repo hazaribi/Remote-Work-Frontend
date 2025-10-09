@@ -1,15 +1,52 @@
 {
   "name": "collaboration-frontend",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.html",
   "scripts": {
-    "dev": "live-server --port=3000",
-    "build": "echo 'Build process here'"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "build:css": "postcss css/input.css -o css/style.css --watch",
+    "build:css:prod": "postcss css/input.css -o css/style.css"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
-    "socket.io-client": "^4.7.2"
+    "@supabase/supabase-js": "^2.45.4",
+    "@tiptap/core": "^2.8.0",
+    "@tiptap/extension-collaboration": "^2.8.0",
+    "@tiptap/extension-collaboration-cursor": "^2.8.0",
+    "@tiptap/pm": "^2.8.0",
+    "@tiptap/starter-kit": "^2.8.0",
+    "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.21",
+    "axios": "^1.7.9",
+    "konva": "^9.3.15",
+    "peerjs": "^1.5.4",
+    "postcss": "^8.5.6",
+    "react": "^18.3.1",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-dom": "^18.3.1",
+    "react-konva": "^18.2.10",
+    "socket.io-client": "^4.8.1",
+    "@tailwindcss/postcss": "^4.1.13",
+    "tailwindcss": "^4.1.13",
+    "vite": "^6.0.5",
+    "y-websocket": "^2.0.4",
+    "yjs": "^13.6.20"
   },
   "devDependencies": {
-    "live-server": "^1.2.2"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@vitest/ui": "^3.2.4",
+    "jsdom": "^25.0.1",
+    "live-server": "^1.2.0",
+    "vitest": "^3.2.4"
   }
 }
