@@ -10,7 +10,7 @@ function Footer() {
             All rights reserved.
           </div>
           <div className="text-sm text-gray-500">
-            Developed by <span className="font-medium text-gray-700">Binay Kumar</span>
+            Developed by <span className="font-medium text-gray-700">Binay Hazarika</span>
           </div>
         </div>
       </div>
