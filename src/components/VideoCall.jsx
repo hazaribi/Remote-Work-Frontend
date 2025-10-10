@@ -202,25 +202,36 @@ function VideoCall({ workspaceId }) {
           streamAssignedRef.current = true;
           console.log('📺 Stream assigned to video element');
           
-          // Force video to play and add user interaction fallback
-          const playVideo = () => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.play().then(() => {
-                console.log('✅ Video playing successfully');
-              }).catch(e => {
-                console.log('❌ Play error:', e);
-                // Add click handler for user interaction
-                const clickHandler = () => {
-                  remoteVideoRef.current.play();
-                  remoteVideoRef.current.removeEventListener('click', clickHandler);
-                };
-                remoteVideoRef.current.addEventListener('click', clickHandler);
-                console.log('💆 Click remote video area to start playback');
-              });
-            }
-          };
+          // Immediate debugging and play attempt
+          console.log('📺 Video element properties:', {
+            srcObject: !!remoteVideoRef.current.srcObject,
+            videoWidth: remoteVideoRef.current.videoWidth,
+            videoHeight: remoteVideoRef.current.videoHeight,
+            paused: remoteVideoRef.current.paused,
+            muted: remoteVideoRef.current.muted
+          });
           
-          setTimeout(playVideo, 200);
+          // Force video properties
+          remoteVideoRef.current.autoplay = true;
+          remoteVideoRef.current.playsInline = true;
+          remoteVideoRef.current.muted = false;
+          
+          // Immediate play attempt
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Video playing immediately');
+          }).catch(e => {
+            console.log('❌ Immediate play error:', e);
+            
+            // Try again after delay
+            setTimeout(() => {
+              remoteVideoRef.current.play().then(() => {
+                console.log('✅ Video playing after delay');
+              }).catch(e2 => {
+                console.log('❌ Delayed play error:', e2);
+                console.log('💆 Try clicking anywhere on the page first, then the video');
+              });
+            }, 500);
+          });
         } else if (streamAssignedRef.current) {
           console.log('📺 Stream already assigned, ignoring duplicate');
         } else {
