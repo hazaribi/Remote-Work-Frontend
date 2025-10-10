@@ -182,8 +182,12 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream:', remoteStream);
+        console.log('📺 Video element exists?', !!remoteVideoRef.current);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
+          console.log('📺 Stream assigned to video element');
+          // Force video to play
+          remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
         }
       });
 
@@ -222,8 +226,10 @@ function VideoCall({ workspaceId }) {
       setIsCallActive(true);
       
       call.on('stream', (remoteStream) => {
+        console.log('🎥 Incoming call - received remote stream:', remoteStream);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
+          remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
         }
       });
 
