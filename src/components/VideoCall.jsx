@@ -160,13 +160,13 @@ function VideoCall({ workspaceId }) {
       }
     }
 
-    if (!peer) {
+    if (!peerRef.current) {
       console.error('Peer not initialized');
       return;
     }
 
     console.log('Calling peer with stream:', localStream);
-    const call = peer.call(remotePeerId, localStream);
+    const call = peerRef.current.call(remotePeerId, localStream);
     setCurrentCall(call);
     
     call.on('stream', (remoteStream) => {
