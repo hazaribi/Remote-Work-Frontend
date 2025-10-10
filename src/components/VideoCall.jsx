@@ -47,13 +47,10 @@ function VideoCall({ workspaceId }) {
 
     newPeer.on('open', (id) => {
       console.log('Peer connected with ID:', id);
-      // Send peer ID to other users in workspace
-      if (socket) {
-        socket.emit('peer_connected', { workspaceId, peerId: id });
-      }
     });
 
     newPeer.on('call', (call) => {
+      console.log('Incoming call from:', call.peer);
       handleIncomingCall(call);
     });
 
@@ -80,15 +77,11 @@ function VideoCall({ workspaceId }) {
       }
     });
 
-    newSocket.on('peer_connected', (data) => {
-      console.log('Peer connected in workspace:', data.peerId);
-    });
-
     newSocket.on('user_calling', (data) => {
-      console.log('User is calling:', data);
+      console.log('User is calling with peer ID:', data.peerId);
       if (peer && data.peerId && data.peerId !== peer.id) {
-        // Auto-answer incoming calls
-        setTimeout(() => makeCall(data.peerId), 1000);
+        console.log('Making call to peer:', data.peerId);
+        setTimeout(() => makeCall(data.peerId), 2000);
       }
     });
 
@@ -108,12 +101,7 @@ function VideoCall({ workspaceId }) {
       }
       
       if (socket && peer) {
-        socket.emit('call_user', {
-          workspaceId,
-          peerId: peer.id,
-          callType: 'video'
-        });
-        // Also broadcast to all users in workspace
+        console.log('Broadcasting call with peer ID:', peer.id);
         socket.emit('user_calling', {
           workspaceId,
           peerId: peer.id
@@ -128,6 +116,8 @@ function VideoCall({ workspaceId }) {
   };
 
   const makeCall = async (remotePeerId) => {
+    console.log('Making call to:', remotePeerId);
+    
     if (!localStream) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -144,17 +134,29 @@ function VideoCall({ workspaceId }) {
       }
     }
 
+    if (!peer) {
+      console.error('Peer not initialized');
+      return;
+    }
+
+    console.log('Calling peer with stream:', localStream);
     const call = peer.call(remotePeerId, localStream);
     setCurrentCall(call);
     
     call.on('stream', (remoteStream) => {
+      console.log('Received remote stream:', remoteStream);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
       }
     });
 
     call.on('close', () => {
+      console.log('Call closed');
       endCall();
+    });
+
+    call.on('error', (error) => {
+      console.error('Call error:', error);
     });
   };
 
