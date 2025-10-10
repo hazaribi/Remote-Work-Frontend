@@ -211,27 +211,39 @@ function VideoCall({ workspaceId }) {
             muted: remoteVideoRef.current.muted
           });
           
-          // Force video properties
+          // Set video properties for reliable playback
           remoteVideoRef.current.autoplay = true;
           remoteVideoRef.current.playsInline = true;
-          remoteVideoRef.current.muted = false;
+          remoteVideoRef.current.controls = false;
           
-          // Immediate play attempt
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Video playing immediately');
-          }).catch(e => {
-            console.log('❌ Immediate play error:', e);
-            
-            // Try again after delay
-            setTimeout(() => {
-              remoteVideoRef.current.play().then(() => {
-                console.log('✅ Video playing after delay');
-              }).catch(e2 => {
-                console.log('❌ Delayed play error:', e2);
-                console.log('💆 Try clicking anywhere on the page first, then the video');
-              });
-            }, 500);
-          });
+          // Force play immediately and handle metadata loading
+          const playVideo = () => {
+            remoteVideoRef.current.play().then(() => {
+              console.log('✅ Video playing successfully');
+            }).catch(e => {
+              console.log('❌ Play error:', e);
+              // Try again with user interaction workaround
+              setTimeout(() => {
+                remoteVideoRef.current.play().catch(e2 => {
+                  console.log('❌ Retry play error:', e2);
+                });
+              }, 100);
+            });
+          };
+          
+          // Play immediately
+          playVideo();
+          
+          // Also listen for metadata in case it loads later
+          remoteVideoRef.current.addEventListener('loadedmetadata', () => {
+            console.log('📺 Video metadata loaded:', {
+              videoWidth: remoteVideoRef.current.videoWidth,
+              videoHeight: remoteVideoRef.current.videoHeight
+            });
+            if (remoteVideoRef.current.paused) {
+              playVideo();
+            }
+          }, { once: true });
         } else if (streamAssignedRef.current) {
           console.log('📺 Stream already assigned, ignoring duplicate');
         } else {
@@ -293,26 +305,34 @@ function VideoCall({ workspaceId }) {
             muted: remoteVideoRef.current.muted
           });
           
-          // Force video properties
+          // Set video properties for reliable playback
           remoteVideoRef.current.autoplay = true;
           remoteVideoRef.current.playsInline = true;
-          remoteVideoRef.current.muted = false;
+          remoteVideoRef.current.controls = false;
           
-          // Immediate play attempt
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Incoming call - Video playing immediately');
-          }).catch(e => {
-            console.log('❌ Incoming call - Immediate play error:', e);
-            
-            // Try again after delay
-            setTimeout(() => {
-              remoteVideoRef.current.play().then(() => {
-                console.log('✅ Incoming call - Video playing after delay');
-              }).catch(e2 => {
-                console.log('❌ Incoming call - Delayed play error:', e2);
-              });
-            }, 500);
-          });
+          // Force play for incoming call
+          const playIncomingVideo = () => {
+            remoteVideoRef.current.play().then(() => {
+              console.log('✅ Incoming call - Video playing');
+            }).catch(e => {
+              console.log('❌ Incoming call - Play error:', e);
+              setTimeout(() => {
+                remoteVideoRef.current.play().catch(e2 => {
+                  console.log('❌ Incoming call - Retry error:', e2);
+                });
+              }, 100);
+            });
+          };
+          
+          playIncomingVideo();
+          
+          // Handle metadata loading
+          remoteVideoRef.current.addEventListener('loadedmetadata', () => {
+            console.log('📺 Incoming call - Metadata loaded');
+            if (remoteVideoRef.current.paused) {
+              playIncomingVideo();
+            }
+          }, { once: true });
         } else if (streamAssignedRef.current) {
           console.log('📺 Incoming call - Stream already assigned, ignoring');
         }
@@ -479,7 +499,6 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  muted={false}
                   className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
                   style={{ display: 'block' }}
                 />
