@@ -264,9 +264,26 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Incoming call - received remote stream:', remoteStream);
-        if (remoteVideoRef.current) {
+        if (remoteVideoRef.current && !streamAssignedRef.current) {
+          const videoTracks = remoteStream.getVideoTracks();
+          console.log('🔍 Incoming call - Video track enabled?', videoTracks[0]?.enabled);
+          console.log('🔍 Incoming call - Video track ready state:', videoTracks[0]?.readyState);
+          
           remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
+          streamAssignedRef.current = true;
+          console.log('📺 Incoming call - Stream assigned to video element');
+          
+          setTimeout(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.play().then(() => {
+                console.log('✅ Incoming call - Video playing successfully');
+              }).catch(e => {
+                console.log('❌ Incoming call - Play error:', e);
+              });
+            }
+          }, 200);
+        } else if (streamAssignedRef.current) {
+          console.log('📺 Incoming call - Stream already assigned, ignoring');
         }
       });
 
