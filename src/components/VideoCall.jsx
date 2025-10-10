@@ -166,24 +166,35 @@ function VideoCall({ workspaceId }) {
     }
 
     console.log('Calling peer with stream:', localStream);
-    const call = peerRef.current.call(remotePeerId, localStream);
-    setCurrentCall(call);
     
-    call.on('stream', (remoteStream) => {
-      console.log('Received remote stream:', remoteStream);
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.srcObject = remoteStream;
+    try {
+      const call = peerRef.current.call(remotePeerId, localStream);
+      
+      if (!call) {
+        console.error('Failed to create call - peer may be disconnected');
+        return;
       }
-    });
+      
+      setCurrentCall(call);
+      
+      call.on('stream', (remoteStream) => {
+        console.log('Received remote stream:', remoteStream);
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+        }
+      });
 
-    call.on('close', () => {
-      console.log('Call closed');
-      endCall();
-    });
+      call.on('close', () => {
+        console.log('Call closed');
+        endCall();
+      });
 
-    call.on('error', (error) => {
-      console.error('Call error:', error);
-    });
+      call.on('error', (error) => {
+        console.error('Call error:', error);
+      });
+    } catch (error) {
+      console.error('Error making call:', error);
+    }
   };
 
   const handleIncomingCall = async (call) => {
