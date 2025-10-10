@@ -396,7 +396,10 @@ function VideoCall({ workspaceId }) {
                 <video
                   ref={remoteVideoRef}
                   autoPlay
+                  playsInline
+                  muted={false}
                   className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
+                  style={{ display: 'block' }}
                 />
                 {!currentCall && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
