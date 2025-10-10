@@ -30,8 +30,8 @@ function VideoCall({ workspaceId }) {
   const remoteVideoRef = useRef(null);
 
   useEffect(() => {
-    initPeer();
     initSocket();
+    initPeer();
 
     return () => {
       if (peer) peer.destroy();
@@ -79,16 +79,19 @@ function VideoCall({ workspaceId }) {
 
     newSocket.on('user_calling', (data) => {
       console.log('User is calling:', data);
-      console.log('My peer ID:', peer?.id);
-      console.log('My user ID from localStorage:', JSON.parse(localStorage.getItem('user')).id);
       
-      // Only respond if it's from a different user and different peer
-      if (peer && data.peerId && data.peerId !== peer.id && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
-        console.log('Making call to peer:', data.peerId);
-        setTimeout(() => makeCall(data.peerId), 2000);
-      } else {
-        console.log('Ignoring own call or same peer');
-      }
+      // Wait for peer to be ready and check if it's from different user
+      setTimeout(() => {
+        console.log('My peer ID:', peer?.id);
+        console.log('My user ID from localStorage:', JSON.parse(localStorage.getItem('user')).id);
+        
+        if (peer && data.peerId && data.peerId !== peer.id && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
+          console.log('Making call to peer:', data.peerId);
+          makeCall(data.peerId);
+        } else {
+          console.log('Ignoring own call or same peer');
+        }
+      }, 1000);
     });
 
     setSocket(newSocket);
@@ -96,6 +99,11 @@ function VideoCall({ workspaceId }) {
 
   const startCall = async () => {
     try {
+      // Stop any existing stream first
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
@@ -117,7 +125,7 @@ function VideoCall({ workspaceId }) {
       setIsCallActive(true);
     } catch (error) {
       console.error('Error accessing camera/microphone:', error);
-      alert('Error accessing camera/microphone: ' + error.message);
+      alert('Error: ' + error.message + '. Please close other tabs using camera or refresh the page.');
     }
   };
 
