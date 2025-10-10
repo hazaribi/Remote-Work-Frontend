@@ -21,6 +21,7 @@ function VideoCall({ workspaceId }) {
   const [peer, setPeer] = useState(null);
   const [socket, setSocket] = useState(null);
   const [myPeerId, setMyPeerId] = useState(null);
+  const peerIdRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -49,6 +50,7 @@ function VideoCall({ workspaceId }) {
     newPeer.on('open', (id) => {
       console.log('Peer connected with ID:', id);
       setMyPeerId(id);
+      peerIdRef.current = id;
     });
 
     newPeer.on('call', (call) => {
@@ -81,21 +83,22 @@ function VideoCall({ workspaceId }) {
 
     newSocket.on('user_calling', (data) => {
       console.log('🔔 User is calling:', data);
-      console.log('📱 My peer ID:', myPeerId);
+      const currentPeerId = peerIdRef.current;
+      console.log('📱 My peer ID:', currentPeerId);
       console.log('👤 My user ID:', JSON.parse(localStorage.getItem('user')).id);
       console.log('🔍 Peer ready?', !!peer);
       console.log('🆔 Different peer?', data.peerId !== myPeerId);
       console.log('👥 Different user?', data.userId !== JSON.parse(localStorage.getItem('user')).id);
       
-      if (peer && myPeerId && data.peerId && data.peerId !== myPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
+      if (peer && currentPeerId && data.peerId && data.peerId !== currentPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
         console.log('✅ Making call to peer:', data.peerId);
         makeCall(data.peerId);
       } else {
         console.log('❌ Ignoring call - reason:', {
           peerReady: !!peer,
-          myPeerIdSet: !!myPeerId,
+          myPeerIdSet: !!currentPeerId,
           hasPeerId: !!data.peerId,
-          differentPeer: data.peerId !== myPeerId,
+          differentPeer: data.peerId !== currentPeerId,
           differentUser: data.userId !== JSON.parse(localStorage.getItem('user')).id
         });
       }
