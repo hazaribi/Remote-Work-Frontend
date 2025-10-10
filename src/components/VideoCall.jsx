@@ -216,38 +216,20 @@ function VideoCall({ workspaceId }) {
           remoteVideoRef.current.playsInline = true;
           remoteVideoRef.current.controls = false;
           
-          // Force video to load and play
-          remoteVideoRef.current.load();
-          
-          const forcePlay = async () => {
-            try {
-              await remoteVideoRef.current.play();
-              console.log('✅ Video playing');
-            } catch (e) {
-              console.log('❌ Play failed:', e);
-              // Mute temporarily to allow autoplay
-              remoteVideoRef.current.muted = true;
-              try {
-                await remoteVideoRef.current.play();
-                console.log('✅ Video playing (muted)');
-                // Unmute after 1 second
-                setTimeout(() => {
-                  remoteVideoRef.current.muted = false;
-                  console.log('🔊 Video unmuted');
-                }, 1000);
-              } catch (e2) {
-                console.log('❌ Muted play failed:', e2);
-              }
-            }
-          };
-          
-          // Multiple attempts to play
-          forcePlay();
-          setTimeout(forcePlay, 500);
+          // Simple play with mute workaround
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Video playing (muted)');
+            setTimeout(() => {
+              remoteVideoRef.current.muted = false;
+              console.log('🔊 Video unmuted');
+            }, 1000);
+          }).catch(e => {
+            console.log('❌ Play error:', e);
+          });
           
           remoteVideoRef.current.addEventListener('loadedmetadata', () => {
             console.log('📺 Metadata loaded:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-            forcePlay();
           });
         } else if (streamAssignedRef.current) {
           console.log('📺 Stream already assigned, ignoring duplicate');
@@ -315,34 +297,19 @@ function VideoCall({ workspaceId }) {
           remoteVideoRef.current.playsInline = true;
           remoteVideoRef.current.controls = false;
           
-          // Force incoming video to play
-          remoteVideoRef.current.load();
-          
-          const forceIncomingPlay = async () => {
-            try {
-              await remoteVideoRef.current.play();
-              console.log('✅ Incoming video playing');
-            } catch (e) {
-              console.log('❌ Incoming play failed:', e);
-              remoteVideoRef.current.muted = true;
-              try {
-                await remoteVideoRef.current.play();
-                console.log('✅ Incoming video playing (muted)');
-                setTimeout(() => {
-                  remoteVideoRef.current.muted = false;
-                }, 1000);
-              } catch (e2) {
-                console.log('❌ Incoming muted play failed:', e2);
-              }
-            }
-          };
-          
-          forceIncomingPlay();
-          setTimeout(forceIncomingPlay, 500);
+          // Simple incoming play with mute workaround
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Incoming video playing (muted)');
+            setTimeout(() => {
+              remoteVideoRef.current.muted = false;
+            }, 1000);
+          }).catch(e => {
+            console.log('❌ Incoming play error:', e);
+          });
           
           remoteVideoRef.current.addEventListener('loadedmetadata', () => {
             console.log('📺 Incoming metadata loaded');
-            forceIncomingPlay();
           });
         } else if (streamAssignedRef.current) {
           console.log('📺 Incoming call - Stream already assigned, ignoring');
