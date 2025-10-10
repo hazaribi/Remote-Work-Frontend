@@ -144,15 +144,17 @@ function VideoCall({ workspaceId }) {
   const makeCall = async (remotePeerId) => {
     console.log('Making call to:', remotePeerId);
     
-    if (!localStream) {
+    let streamToUse = localStream;
+    
+    if (!streamToUse) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        streamToUse = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
-        setLocalStream(stream);
+        setLocalStream(streamToUse);
         if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.srcObject = streamToUse;
         }
       } catch (error) {
         console.error('Error accessing camera/microphone:', error);
@@ -165,10 +167,10 @@ function VideoCall({ workspaceId }) {
       return;
     }
 
-    console.log('Calling peer with stream:', localStream);
+    console.log('Calling peer with stream:', streamToUse);
     
     try {
-      const call = peerRef.current.call(remotePeerId, localStream);
+      const call = peerRef.current.call(remotePeerId, streamToUse);
       
       if (!call) {
         console.error('Failed to create call - peer may be disconnected');
