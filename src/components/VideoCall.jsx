@@ -20,6 +20,7 @@ const PEER_CONFIG = {
 function VideoCall({ workspaceId }) {
   const [peer, setPeer] = useState(null);
   const [socket, setSocket] = useState(null);
+  const [myPeerId, setMyPeerId] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -47,6 +48,7 @@ function VideoCall({ workspaceId }) {
 
     newPeer.on('open', (id) => {
       console.log('Peer connected with ID:', id);
+      setMyPeerId(id);
     });
 
     newPeer.on('call', (call) => {
@@ -78,20 +80,25 @@ function VideoCall({ workspaceId }) {
     });
 
     newSocket.on('user_calling', (data) => {
-      console.log('User is calling:', data);
+      console.log('🔔 User is calling:', data);
+      console.log('📱 My peer ID:', myPeerId);
+      console.log('👤 My user ID:', JSON.parse(localStorage.getItem('user')).id);
+      console.log('🔍 Peer ready?', !!peer);
+      console.log('🆔 Different peer?', data.peerId !== myPeerId);
+      console.log('👥 Different user?', data.userId !== JSON.parse(localStorage.getItem('user')).id);
       
-      // Wait for peer to be ready and check if it's from different user
-      setTimeout(() => {
-        console.log('My peer ID:', peer?.id);
-        console.log('My user ID from localStorage:', JSON.parse(localStorage.getItem('user')).id);
-        
-        if (peer && data.peerId && data.peerId !== peer.id && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
-          console.log('Making call to peer:', data.peerId);
-          makeCall(data.peerId);
-        } else {
-          console.log('Ignoring own call or same peer');
-        }
-      }, 1000);
+      if (peer && myPeerId && data.peerId && data.peerId !== myPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
+        console.log('✅ Making call to peer:', data.peerId);
+        makeCall(data.peerId);
+      } else {
+        console.log('❌ Ignoring call - reason:', {
+          peerReady: !!peer,
+          myPeerIdSet: !!myPeerId,
+          hasPeerId: !!data.peerId,
+          differentPeer: data.peerId !== myPeerId,
+          differentUser: data.userId !== JSON.parse(localStorage.getItem('user')).id
+        });
+      }
     });
 
     setSocket(newSocket);
