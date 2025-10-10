@@ -3,8 +3,19 @@ import Peer from 'peerjs';
 import io from 'socket.io-client';
 
 const SOCKET_URL = 'https://remote-work-backend.onrender.com';
-const PEER_HOST = 'remote-work-backend.onrender.com';
-const PEER_PORT = 443;
+// Use public PeerJS server for now
+const PEER_CONFIG = {
+  host: '0.peerjs.com',
+  port: 443,
+  path: '/',
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+  }
+};
 
 function VideoCall({ workspaceId }) {
   const [peer, setPeer] = useState(null);
@@ -32,18 +43,22 @@ function VideoCall({ workspaceId }) {
   }, [workspaceId]);
 
   const initPeer = () => {
-    const newPeer = new Peer({
-      host: PEER_HOST,
-      port: PEER_PORT,
-      path: '/peerjs'
-    });
+    const newPeer = new Peer(PEER_CONFIG);
 
     newPeer.on('open', (id) => {
       console.log('Peer connected with ID:', id);
+      // Send peer ID to other users in workspace
+      if (socket) {
+        socket.emit('peer_connected', { workspaceId, peerId: id });
+      }
     });
 
     newPeer.on('call', (call) => {
       handleIncomingCall(call);
+    });
+
+    newPeer.on('error', (error) => {
+      console.error('Peer error:', error);
     });
 
     setPeer(newPeer);
@@ -62,6 +77,18 @@ function VideoCall({ workspaceId }) {
     newSocket.on('incoming_call', (data) => {
       if (peer && data.peerId) {
         makeCall(data.peerId);
+      }
+    });
+
+    newSocket.on('peer_connected', (data) => {
+      console.log('Peer connected in workspace:', data.peerId);
+    });
+
+    newSocket.on('user_calling', (data) => {
+      console.log('User is calling:', data);
+      if (peer && data.peerId && data.peerId !== peer.id) {
+        // Auto-answer incoming calls
+        setTimeout(() => makeCall(data.peerId), 1000);
       }
     });
 
@@ -85,6 +112,11 @@ function VideoCall({ workspaceId }) {
           workspaceId,
           peerId: peer.id,
           callType: 'video'
+        });
+        // Also broadcast to all users in workspace
+        socket.emit('user_calling', {
+          workspaceId,
+          peerId: peer.id
         });
       }
       

@@ -106,10 +106,27 @@ function Whiteboard({ workspaceId }) {
 
   const getMousePos = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
     return {
-      offsetX: e.clientX - rect.left,
-      offsetY: e.clientY - rect.top
+      offsetX: clientX - rect.left,
+      offsetY: clientY - rect.top
     };
+  };
+
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    startDrawing(e);
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    draw(e);
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    stopDrawing();
   };
 
   const drawRemoteLine = (line) => {
@@ -209,11 +226,15 @@ function Whiteboard({ workspaceId }) {
               ref={canvasRef}
               width={1000}
               height={600}
-              className="border-2 border-gray-300 rounded-2xl cursor-crosshair bg-white shadow-lg w-full max-w-full"
+              className="border-2 border-gray-300 rounded-2xl cursor-crosshair bg-white shadow-lg w-full max-w-full touch-none"
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
             />
             
             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-gray-200">
