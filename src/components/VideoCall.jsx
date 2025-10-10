@@ -275,6 +275,9 @@ function VideoCall({ workspaceId }) {
       remoteVideoRef.current.srcObject = null;
     }
     
+    // Reset stream assignment flag
+    streamAssignedRef.current = false;
+    
     setCurrentCall(null);
     setIsCallActive(false);
     
