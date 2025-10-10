@@ -284,15 +284,35 @@ function VideoCall({ workspaceId }) {
           streamAssignedRef.current = true;
           console.log('📺 Incoming call - Stream assigned to video element');
           
-          setTimeout(() => {
-            if (remoteVideoRef.current) {
+          // Immediate debugging and play attempt for incoming call
+          console.log('📺 Incoming call - Video element properties:', {
+            srcObject: !!remoteVideoRef.current.srcObject,
+            videoWidth: remoteVideoRef.current.videoWidth,
+            videoHeight: remoteVideoRef.current.videoHeight,
+            paused: remoteVideoRef.current.paused,
+            muted: remoteVideoRef.current.muted
+          });
+          
+          // Force video properties
+          remoteVideoRef.current.autoplay = true;
+          remoteVideoRef.current.playsInline = true;
+          remoteVideoRef.current.muted = false;
+          
+          // Immediate play attempt
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Incoming call - Video playing immediately');
+          }).catch(e => {
+            console.log('❌ Incoming call - Immediate play error:', e);
+            
+            // Try again after delay
+            setTimeout(() => {
               remoteVideoRef.current.play().then(() => {
-                console.log('✅ Incoming call - Video playing successfully');
-              }).catch(e => {
-                console.log('❌ Incoming call - Play error:', e);
+                console.log('✅ Incoming call - Video playing after delay');
+              }).catch(e2 => {
+                console.log('❌ Incoming call - Delayed play error:', e2);
               });
-            }
-          }, 200);
+            }, 500);
+          });
         } else if (streamAssignedRef.current) {
           console.log('📺 Incoming call - Stream already assigned, ignoring');
         }
