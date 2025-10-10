@@ -190,8 +190,10 @@ function VideoCall({ workspaceId }) {
           setTimeout(() => {
             remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
           }, 100);
-        } else if (remoteVideoRef.current.srcObject) {
+        } else if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
           console.log('📺 Stream already assigned, skipping');
+        } else {
+          console.log('📺 Video element not available or null');
         }
       });
 
