@@ -177,10 +177,11 @@ function VideoCall({ workspaceId }) {
         return;
       }
       
+      console.log('✅ Call created successfully:', call);
       setCurrentCall(call);
       
       call.on('stream', (remoteStream) => {
-        console.log('Received remote stream:', remoteStream);
+        console.log('🎥 Received remote stream:', remoteStream);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
@@ -200,19 +201,23 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleIncomingCall = async (call) => {
+    console.log('📞 Handling incoming call from:', call.peer);
     try {
-      if (!localStream) {
-        const stream = await navigator.mediaDevices.getUserMedia({
+      let streamToAnswer = localStream;
+      
+      if (!streamToAnswer) {
+        streamToAnswer = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
         });
-        setLocalStream(stream);
+        setLocalStream(streamToAnswer);
         if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.srcObject = streamToAnswer;
         }
       }
 
-      call.answer(localStream);
+      console.log('📞 Answering call with stream:', streamToAnswer);
+      call.answer(streamToAnswer);
       setCurrentCall(call);
       setIsCallActive(true);
       
