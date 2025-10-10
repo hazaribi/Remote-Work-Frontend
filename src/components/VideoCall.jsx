@@ -78,10 +78,16 @@ function VideoCall({ workspaceId }) {
     });
 
     newSocket.on('user_calling', (data) => {
-      console.log('User is calling with peer ID:', data.peerId);
-      if (peer && data.peerId && data.peerId !== peer.id) {
+      console.log('User is calling:', data);
+      console.log('My peer ID:', peer?.id);
+      console.log('My user ID from localStorage:', JSON.parse(localStorage.getItem('user')).id);
+      
+      // Only respond if it's from a different user and different peer
+      if (peer && data.peerId && data.peerId !== peer.id && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
         console.log('Making call to peer:', data.peerId);
         setTimeout(() => makeCall(data.peerId), 2000);
+      } else {
+        console.log('Ignoring own call or same peer');
       }
     });
 
