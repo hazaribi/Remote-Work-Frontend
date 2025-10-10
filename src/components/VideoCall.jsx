@@ -184,12 +184,23 @@ function VideoCall({ workspaceId }) {
         console.log('🎥 Received remote stream:', remoteStream);
         console.log('📺 Video element exists?', !!remoteVideoRef.current);
         if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+          console.log('🔍 Stream tracks:', remoteStream.getTracks());
+          console.log('🎥 Video tracks:', remoteStream.getVideoTracks());
+          console.log('🎤 Audio tracks:', remoteStream.getAudioTracks());
+          
           remoteVideoRef.current.srcObject = remoteStream;
           console.log('📺 Stream assigned to video element');
-          // Force video to play
-          setTimeout(() => {
-            remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
-          }, 100);
+          
+          // Force video to play immediately
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Video playing successfully');
+          }).catch(e => {
+            console.log('❌ Play error:', e);
+            // Try again after a short delay
+            setTimeout(() => {
+              remoteVideoRef.current.play().catch(e2 => console.log('Second play error:', e2));
+            }, 500);
+          });
         } else if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
           console.log('📺 Stream already assigned, skipping');
         } else {
