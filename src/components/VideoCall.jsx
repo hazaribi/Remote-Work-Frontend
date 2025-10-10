@@ -23,6 +23,7 @@ function VideoCall({ workspaceId }) {
   const [myPeerId, setMyPeerId] = useState(null);
   const peerIdRef = useRef(null);
   const peerRef = useRef(null);
+  const streamAssignedRef = useRef(false);
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -183,25 +184,27 @@ function VideoCall({ workspaceId }) {
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream:', remoteStream);
         console.log('📺 Video element exists?', !!remoteVideoRef.current);
-        if (remoteVideoRef.current) {
-          // Always assign the stream to ensure it's the latest one
+        if (remoteVideoRef.current && !streamAssignedRef.current) {
           console.log('🔍 Stream tracks:', remoteStream.getTracks());
           console.log('🎥 Video tracks:', remoteStream.getVideoTracks());
           console.log('🎤 Audio tracks:', remoteStream.getAudioTracks());
           
           remoteVideoRef.current.srcObject = remoteStream;
+          streamAssignedRef.current = true;
           console.log('📺 Stream assigned to video element');
           
-          // Force video to play immediately
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Video playing successfully');
-          }).catch(e => {
-            console.log('❌ Play error:', e);
-            // Try again after a short delay
-            setTimeout(() => {
-              remoteVideoRef.current.play().catch(e2 => console.log('Second play error:', e2));
-            }, 500);
-          });
+          // Force video to play after a short delay to avoid interruption
+          setTimeout(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.play().then(() => {
+                console.log('✅ Video playing successfully');
+              }).catch(e => {
+                console.log('❌ Play error:', e);
+              });
+            }
+          }, 200);
+        } else if (streamAssignedRef.current) {
+          console.log('📺 Stream already assigned, ignoring duplicate');
         } else {
           console.log('📺 Video element not available or null');
         }
