@@ -22,6 +22,7 @@ function VideoCall({ workspaceId }) {
   const [socket, setSocket] = useState(null);
   const [myPeerId, setMyPeerId] = useState(null);
   const peerIdRef = useRef(null);
+  const peerRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -63,6 +64,7 @@ function VideoCall({ workspaceId }) {
     });
 
     setPeer(newPeer);
+    peerRef.current = newPeer;
   };
 
   const initSocket = () => {
@@ -86,16 +88,16 @@ function VideoCall({ workspaceId }) {
       const currentPeerId = peerIdRef.current;
       console.log('📱 My peer ID:', currentPeerId);
       console.log('👤 My user ID:', JSON.parse(localStorage.getItem('user')).id);
-      console.log('🔍 Peer ready?', !!peer);
+      console.log('🔍 Peer ready?', !!peerRef.current);
       console.log('🆔 Different peer?', data.peerId !== myPeerId);
       console.log('👥 Different user?', data.userId !== JSON.parse(localStorage.getItem('user')).id);
       
-      if (peer && currentPeerId && data.peerId && data.peerId !== currentPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
+      if (peerRef.current && currentPeerId && data.peerId && data.peerId !== currentPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
         console.log('✅ Making call to peer:', data.peerId);
         makeCall(data.peerId);
       } else {
         console.log('❌ Ignoring call - reason:', {
-          peerReady: !!peer,
+          peerReady: !!peerRef.current,
           myPeerIdSet: !!currentPeerId,
           hasPeerId: !!data.peerId,
           differentPeer: data.peerId !== currentPeerId,
