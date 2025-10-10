@@ -185,24 +185,42 @@ function VideoCall({ workspaceId }) {
         console.log('🎥 Received remote stream:', remoteStream);
         console.log('📺 Video element exists?', !!remoteVideoRef.current);
         if (remoteVideoRef.current && !streamAssignedRef.current) {
+          const videoTracks = remoteStream.getVideoTracks();
+          const audioTracks = remoteStream.getAudioTracks();
+          
           console.log('🔍 Stream tracks:', remoteStream.getTracks());
-          console.log('🎥 Video tracks:', remoteStream.getVideoTracks());
-          console.log('🎤 Audio tracks:', remoteStream.getAudioTracks());
+          console.log('🎥 Video tracks:', videoTracks);
+          console.log('🎤 Audio tracks:', audioTracks);
+          
+          // Check if video track is enabled
+          if (videoTracks.length > 0) {
+            console.log('🔍 Video track enabled?', videoTracks[0].enabled);
+            console.log('🔍 Video track ready state:', videoTracks[0].readyState);
+          }
           
           remoteVideoRef.current.srcObject = remoteStream;
           streamAssignedRef.current = true;
           console.log('📺 Stream assigned to video element');
           
-          // Force video to play after a short delay to avoid interruption
-          setTimeout(() => {
+          // Force video to play and add user interaction fallback
+          const playVideo = () => {
             if (remoteVideoRef.current) {
               remoteVideoRef.current.play().then(() => {
                 console.log('✅ Video playing successfully');
               }).catch(e => {
                 console.log('❌ Play error:', e);
+                // Add click handler for user interaction
+                const clickHandler = () => {
+                  remoteVideoRef.current.play();
+                  remoteVideoRef.current.removeEventListener('click', clickHandler);
+                };
+                remoteVideoRef.current.addEventListener('click', clickHandler);
+                console.log('💆 Click remote video area to start playback');
               });
             }
-          }, 200);
+          };
+          
+          setTimeout(playVideo, 200);
         } else if (streamAssignedRef.current) {
           console.log('📺 Stream already assigned, ignoring duplicate');
         } else {
