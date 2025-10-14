@@ -313,13 +313,12 @@ function VideoCall({ workspaceId }) {
     console.log('🔧 Assigning remote stream with tracks:', remoteStream.getTracks().length);
     
     remoteStreamRef.current = remoteStream;
-    setHasRemoteStream(true);
     
     if (remoteVideoRef.current) {
       console.log('🔧 Video element found, assigning stream');
       remoteVideoRef.current.srcObject = remoteStream;
+      setHasRemoteStream(true);
       
-      // Force play
       setTimeout(() => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.play().then(() => {
@@ -573,22 +572,20 @@ function VideoCall({ workspaceId }) {
                 <h3 className="text-lg font-semibold text-gray-900">Remote Video</h3>
               </div>
               <div className="relative">
-                {hasRemoteStream && (
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-80 bg-red-500 rounded-2xl shadow-lg object-cover"
-                    style={{ display: 'block', minHeight: '320px' }}
-                    onLoadedMetadata={() => console.log('📺 Remote video metadata loaded')}
-                    onPlay={() => console.log('▶️ Remote video started playing')}
-                    onError={(e) => console.log('❌ Remote video error:', e)}
-                    onCanPlay={() => console.log('🎥 Remote video can play')}
-                  />
-                )}
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-80 bg-red-500 rounded-2xl shadow-lg object-cover"
+                  style={{ display: hasRemoteStream ? 'block' : 'none', minHeight: '320px' }}
+                  onLoadedMetadata={() => console.log('📺 Remote video metadata loaded')}
+                  onPlay={() => console.log('▶️ Remote video started playing')}
+                  onError={(e) => console.log('❌ Remote video error:', e)}
+                  onCanPlay={() => console.log('🎥 Remote video can play')}
+                />
                 {!hasRemoteStream && (
-                  <div className="w-full h-80 bg-blue-500 rounded-2xl flex items-center justify-center">
+                  <div className="absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center">
                     <p className="text-white">No Remote Stream</p>
                   </div>
                 )}
