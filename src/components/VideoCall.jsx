@@ -576,9 +576,7 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  muted
-                  className="w-full h-80 bg-red-500 rounded-2xl shadow-lg object-cover"
-                  style={{ display: hasRemoteStream ? 'block' : 'none', minHeight: '320px' }}
+                  className="w-full h-80 bg-green-500"
                   onLoadedMetadata={() => console.log('📺 Remote video metadata loaded')}
                   onPlay={() => console.log('▶️ Remote video started playing')}
                   onError={(e) => console.log('❌ Remote video error:', e)}
