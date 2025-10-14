@@ -310,7 +310,17 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
-    console.log('🔧 Stream tracks:', remoteStream.getTracks().map(t => `${t.kind}: ${t.enabled}`));
+    console.log('🔧 Stream ID:', remoteStream.id);
+    console.log('🔧 Stream active:', remoteStream.active);
+    
+    const videoTrack = remoteStream.getVideoTracks()[0];
+    if (videoTrack) {
+      console.log('🔧 Video track ID:', videoTrack.id);
+      console.log('🔧 Video track enabled:', videoTrack.enabled);
+      console.log('🔧 Video track muted:', videoTrack.muted);
+      console.log('🔧 Video track readyState:', videoTrack.readyState);
+      console.log('🔧 Video track settings:', videoTrack.getSettings());
+    }
     
     remoteStreamRef.current = remoteStream;
     setHasRemoteStream(true);
@@ -318,11 +328,15 @@ function VideoCall({ workspaceId }) {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
       
-      // Force immediate play
       setTimeout(() => {
         if (remoteVideoRef.current) {
+          console.log('🔧 Video element paused:', remoteVideoRef.current.paused);
+          console.log('🔧 Video element muted:', remoteVideoRef.current.muted);
+          console.log('🔧 Video element readyState:', remoteVideoRef.current.readyState);
+          console.log('🔧 Video element networkState:', remoteVideoRef.current.networkState);
+          
           remoteVideoRef.current.play().then(() => {
-            console.log('✅ Remote video playing, dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+            console.log('✅ Playing - dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
           }).catch(e => console.log('❌ Play failed:', e.message));
         }
       }, 500);
@@ -574,8 +588,15 @@ function VideoCall({ workspaceId }) {
                   playsInline
                   muted={false}
                   className="w-full h-40 sm:h-80 bg-black rounded-lg sm:rounded-2xl"
-                  onLoadedMetadata={(e) => console.log('📺 Metadata:', e.target.videoWidth, 'x', e.target.videoHeight)}
+                  onLoadedMetadata={(e) => {
+                    console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
+                    console.log('📺 Video duration:', e.target.duration);
+                    console.log('📺 Video tracks:', e.target.srcObject?.getVideoTracks().map(t => t.getSettings()));
+                  }}
                   onPlay={() => console.log('▶️ Video playing')}
+                  onLoadStart={() => console.log('📄 Load start')}
+                  onCanPlay={() => console.log('🎥 Can play')}
+                  onError={(e) => console.log('❌ Video error:', e.target.error)}
                 />
                 {!hasRemoteStream && (
                   <div className="absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center">
