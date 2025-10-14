@@ -602,19 +602,24 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  muted={false}
-                  className="w-full h-40 sm:h-80 bg-black rounded-lg sm:rounded-2xl"
+                  controls
+                  style={{
+                    width: '100%',
+                    height: '160px',
+                    backgroundColor: 'red',
+                    border: '3px solid yellow',
+                    display: 'block'
+                  }}
                   onLoadedMetadata={(e) => {
                     console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
-                    if (e.target.videoWidth > 0 && e.target.videoHeight > 0) {
-                      console.log('✅ Video has valid dimensions - should be visible');
-                    }
+                    console.log('📺 Video element style:', window.getComputedStyle(e.target));
                   }}
                   onPlay={() => console.log('▶️ Video playing')}
                   onTimeUpdate={() => {
-                    // Only log once to avoid spam
                     if (!remoteVideoRef.current?.hasLoggedTimeUpdate) {
-                      console.log('🕰️ Video time updating - content is playing');
+                      console.log('🕰️ Video time updating');
+                      console.log('🕰️ Current time:', remoteVideoRef.current.currentTime);
+                      console.log('🕰️ Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
                       remoteVideoRef.current.hasLoggedTimeUpdate = true;
                     }
                   }}
