@@ -309,6 +309,11 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
+    console.log('🔧 handleRemoteStream called with:', remoteStream);
+    console.log('🔧 Stream tracks:', remoteStream.getTracks());
+    console.log('🔧 Video element exists:', !!remoteVideoRef.current);
+    console.log('🔧 Cleanup flag:', isCleaningUpRef.current);
+    
     if (remoteStreamRef.current) {
       remoteStreamRef.current.getTracks().forEach(track => track.stop());
     }
@@ -316,19 +321,26 @@ function VideoCall({ workspaceId }) {
     remoteStreamRef.current = remoteStream;
     
     if (remoteVideoRef.current && !isCleaningUpRef.current) {
+      console.log('🔧 Assigning stream to video element');
       remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.autoplay = true;
-      remoteVideoRef.current.playsInline = true;
       
-      // Force play without waiting for metadata
-      remoteVideoRef.current.play().catch(() => {
-        // Retry if failed
+      console.log('🔧 Video element srcObject after assignment:', remoteVideoRef.current.srcObject);
+      
+      // Try to play immediately
+      remoteVideoRef.current.play().then(() => {
+        console.log('✅ Remote video playing successfully');
+      }).catch((error) => {
+        console.log('❌ Play failed:', error);
+        // Force a retry
         setTimeout(() => {
-          if (remoteVideoRef.current && !isCleaningUpRef.current) {
-            remoteVideoRef.current.play().catch(() => {});
+          if (remoteVideoRef.current && remoteStreamRef.current) {
+            console.log('🔄 Retrying video play');
+            remoteVideoRef.current.play().catch(e => console.log('❌ Retry failed:', e));
           }
-        }, 500);
+        }, 1000);
       });
+    } else {
+      console.log('❌ Cannot assign stream - video ref missing or cleaning up');
     }
   };
 
@@ -578,8 +590,13 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
+                  muted={false}
+                  controls={false}
                   className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
                   style={{ display: 'block' }}
+                  onLoadedMetadata={() => console.log('📺 Remote video metadata loaded')}
+                  onPlay={() => console.log('▶️ Remote video started playing')}
+                  onError={(e) => console.log('❌ Remote video error:', e)}
                 />
                 {!remoteStreamRef.current && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
