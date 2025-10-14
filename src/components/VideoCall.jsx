@@ -23,7 +23,7 @@ function VideoCall({ workspaceId }) {
   const [myPeerId, setMyPeerId] = useState(null);
   const peerIdRef = useRef(null);
   const peerRef = useRef(null);
-  const streamAssignedRef = useRef(false);
+
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
@@ -183,58 +183,15 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream:', remoteStream);
-        console.log('📺 Video element exists?', !!remoteVideoRef.current);
-        if (remoteVideoRef.current && !streamAssignedRef.current) {
-          const videoTracks = remoteStream.getVideoTracks();
-          const audioTracks = remoteStream.getAudioTracks();
-          
-          console.log('🔍 Stream tracks:', remoteStream.getTracks());
-          console.log('🎥 Video tracks:', videoTracks);
-          console.log('🎤 Audio tracks:', audioTracks);
-          
-          // Check if video track is enabled
-          if (videoTracks.length > 0) {
-            console.log('🔍 Video track enabled?', videoTracks[0].enabled);
-            console.log('🔍 Video track ready state:', videoTracks[0].readyState);
-          }
-          
+        if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
-          streamAssignedRef.current = true;
-          console.log('📺 Stream assigned to video element');
-          
-          // Immediate debugging and play attempt
-          console.log('📺 Video element properties:', {
-            srcObject: !!remoteVideoRef.current.srcObject,
-            videoWidth: remoteVideoRef.current.videoWidth,
-            videoHeight: remoteVideoRef.current.videoHeight,
-            paused: remoteVideoRef.current.paused,
-            muted: remoteVideoRef.current.muted
-          });
-          
-          // Set video properties for reliable playback
-          remoteVideoRef.current.autoplay = true;
-          remoteVideoRef.current.playsInline = true;
-          remoteVideoRef.current.controls = false;
-          
-          // Simple play with mute workaround
           remoteVideoRef.current.muted = true;
           remoteVideoRef.current.play().then(() => {
-            console.log('✅ Video playing (muted)');
+            console.log('✅ Video playing');
             setTimeout(() => {
               remoteVideoRef.current.muted = false;
-              console.log('🔊 Video unmuted');
             }, 1000);
-          }).catch(e => {
-            console.log('❌ Play error:', e);
-          });
-          
-          remoteVideoRef.current.addEventListener('loadedmetadata', () => {
-            console.log('📺 Metadata loaded:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-          });
-        } else if (streamAssignedRef.current) {
-          console.log('📺 Stream already assigned, ignoring duplicate');
-        } else {
-          console.log('📺 Video element not available or null');
+          }).catch(e => console.log('❌ Play error:', e));
         }
       });
 
@@ -274,45 +231,15 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Incoming call - received remote stream:', remoteStream);
-        if (remoteVideoRef.current && !streamAssignedRef.current) {
-          const videoTracks = remoteStream.getVideoTracks();
-          console.log('🔍 Incoming call - Video track enabled?', videoTracks[0]?.enabled);
-          console.log('🔍 Incoming call - Video track ready state:', videoTracks[0]?.readyState);
-          
+        if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
-          streamAssignedRef.current = true;
-          console.log('📺 Incoming call - Stream assigned to video element');
-          
-          // Immediate debugging and play attempt for incoming call
-          console.log('📺 Incoming call - Video element properties:', {
-            srcObject: !!remoteVideoRef.current.srcObject,
-            videoWidth: remoteVideoRef.current.videoWidth,
-            videoHeight: remoteVideoRef.current.videoHeight,
-            paused: remoteVideoRef.current.paused,
-            muted: remoteVideoRef.current.muted
-          });
-          
-          // Set video properties for reliable playback
-          remoteVideoRef.current.autoplay = true;
-          remoteVideoRef.current.playsInline = true;
-          remoteVideoRef.current.controls = false;
-          
-          // Simple incoming play with mute workaround
           remoteVideoRef.current.muted = true;
           remoteVideoRef.current.play().then(() => {
-            console.log('✅ Incoming video playing (muted)');
+            console.log('✅ Incoming video playing');
             setTimeout(() => {
               remoteVideoRef.current.muted = false;
             }, 1000);
-          }).catch(e => {
-            console.log('❌ Incoming play error:', e);
-          });
-          
-          remoteVideoRef.current.addEventListener('loadedmetadata', () => {
-            console.log('📺 Incoming metadata loaded');
-          });
-        } else if (streamAssignedRef.current) {
-          console.log('📺 Incoming call - Stream already assigned, ignoring');
+          }).catch(e => console.log('❌ Incoming play error:', e));
         }
       });
 
