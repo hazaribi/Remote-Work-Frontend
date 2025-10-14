@@ -99,17 +99,12 @@ function VideoCall({ workspaceId }) {
       console.log('🆔 Different peer?', data.peerId !== myPeerId);
       console.log('👥 Different user?', data.userId !== JSON.parse(localStorage.getItem('user')).id);
       
-      if (peerRef.current && currentPeerId && data.peerId && data.peerId !== currentPeerId && data.userId !== JSON.parse(localStorage.getItem('user')).id) {
+      // Only connect to different peers (ignore same user's other tabs)
+      if (peerRef.current && currentPeerId && data.peerId && data.peerId !== currentPeerId) {
         console.log('✅ Making call to peer:', data.peerId);
         makeCall(data.peerId);
       } else {
-        console.log('❌ Ignoring call - reason:', {
-          peerReady: !!peerRef.current,
-          myPeerIdSet: !!currentPeerId,
-          hasPeerId: !!data.peerId,
-          differentPeer: data.peerId !== currentPeerId,
-          differentUser: data.userId !== JSON.parse(localStorage.getItem('user')).id
-        });
+        console.log('❌ Ignoring call - same peer or invalid data');
       }
     });
 
@@ -190,14 +185,18 @@ function VideoCall({ workspaceId }) {
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream:', remoteStream);
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Video playing');
-            setTimeout(() => {
-              remoteVideoRef.current.muted = false;
-            }, 1000);
-          }).catch(e => console.log('❌ Play error:', e));
+          // Clear any existing stream first
+          remoteVideoRef.current.srcObject = null;
+          setTimeout(() => {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.muted = true;
+            remoteVideoRef.current.play().then(() => {
+              console.log('✅ Video playing');
+              setTimeout(() => {
+                remoteVideoRef.current.muted = false;
+              }, 1000);
+            }).catch(e => console.log('❌ Play error:', e));
+          }, 100);
         }
       });
 
@@ -238,14 +237,18 @@ function VideoCall({ workspaceId }) {
       call.on('stream', (remoteStream) => {
         console.log('🎥 Incoming call - received remote stream:', remoteStream);
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Incoming video playing');
-            setTimeout(() => {
-              remoteVideoRef.current.muted = false;
-            }, 1000);
-          }).catch(e => console.log('❌ Incoming play error:', e));
+          // Clear any existing stream first
+          remoteVideoRef.current.srcObject = null;
+          setTimeout(() => {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.muted = true;
+            remoteVideoRef.current.play().then(() => {
+              console.log('✅ Incoming video playing');
+              setTimeout(() => {
+                remoteVideoRef.current.muted = false;
+              }, 1000);
+            }).catch(e => console.log('❌ Incoming play error:', e));
+          }, 100);
         }
       });
 
