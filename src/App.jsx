@@ -7,11 +7,13 @@ import VideoCall from './components/VideoCall';
 import MultiVideoCall from './components/MultiVideoCall';
 import Whiteboard from './components/Whiteboard';
 import Footer from './components/Footer';
+import InviteModal from './components/InviteModal';
 
 function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -138,6 +140,15 @@ function App() {
                     </svg>
                     <span className="hidden sm:inline">Whiteboard</span>
                   </button>
+                  <button
+                    onClick={() => setShowInviteModal(true)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 text-gray-600 hover:text-green-600 hover:bg-green-50"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="hidden sm:inline">Invite</span>
+                  </button>
                 </>
               )}
               <button
@@ -176,6 +187,13 @@ function App() {
         )}
         {currentView === 'whiteboard' && currentWorkspace && (
           <Whiteboard workspaceId={currentWorkspace.id} />
+        )}
+        
+        {showInviteModal && currentWorkspace && (
+          <InviteModal 
+            workspaceId={currentWorkspace.id} 
+            onClose={() => setShowInviteModal(false)} 
+          />
         )}
       </main>
       <Footer />
