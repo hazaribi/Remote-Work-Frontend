@@ -84,6 +84,11 @@ function VideoCall({ workspaceId }) {
       }
     });
 
+    newSocket.on('call_ended', (data) => {
+      console.log('Call ended by remote user');
+      endCall();
+    });
+
     newSocket.on('user_calling', (data) => {
       console.log('🔔 User is calling:', data);
       const currentPeerId = peerIdRef.current;
@@ -196,7 +201,7 @@ function VideoCall({ workspaceId }) {
       });
 
       call.on('close', () => {
-        console.log('Call closed');
+        console.log('Call closed by remote user');
         endCall();
       });
 
@@ -244,6 +249,7 @@ function VideoCall({ workspaceId }) {
       });
 
       call.on('close', () => {
+        console.log('Incoming call closed by remote user');
         endCall();
       });
     } catch (error) {

@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import TaskBoard from './components/TaskBoard';
 import Chat from './components/Chat';
 import VideoCall from './components/VideoCall';
+import MultiVideoCall from './components/MultiVideoCall';
 import Whiteboard from './components/Whiteboard';
 import Footer from './components/Footer';
 
@@ -109,7 +110,20 @@ function App() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    <span className="hidden sm:inline">Video</span>
+                    <span className="hidden sm:inline">1-on-1</span>
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('multivideo')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                      currentView === 'multivideo' 
+                        ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white shadow-lg' 
+                        : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span className="hidden sm:inline">Group</span>
                   </button>
                   <button
                     onClick={() => setCurrentView('whiteboard')}
@@ -156,6 +170,9 @@ function App() {
         )}
         {currentView === 'video' && currentWorkspace && (
           <VideoCall workspaceId={currentWorkspace.id} />
+        )}
+        {currentView === 'multivideo' && currentWorkspace && (
+          <MultiVideoCall workspaceId={currentWorkspace.id} />
         )}
         {currentView === 'whiteboard' && currentWorkspace && (
           <Whiteboard workspaceId={currentWorkspace.id} />
