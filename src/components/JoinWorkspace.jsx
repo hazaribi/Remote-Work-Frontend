@@ -32,6 +32,8 @@ function JoinWorkspace() {
   const joinWorkspace = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
+      // Store invite code before redirecting to login
+      localStorage.setItem('pendingInvite', code);
       navigate('/');
       return;
     }
@@ -47,6 +49,8 @@ function JoinWorkspace() {
 
       const data = await response.json();
       if (response.ok) {
+        // Clear pending invite and redirect
+        localStorage.removeItem('pendingInvite');
         alert('Successfully joined workspace!');
         navigate('/');
       } else {

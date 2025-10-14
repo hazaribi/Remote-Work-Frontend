@@ -27,6 +27,13 @@ function App() {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
+    
+    // Check for pending invite after login
+    const pendingInvite = localStorage.getItem('pendingInvite');
+    if (pendingInvite) {
+      // Redirect to join page with the stored invite code
+      window.location.href = `/join/${pendingInvite}`;
+    }
   };
 
   const handleLogout = () => {
