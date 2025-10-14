@@ -310,26 +310,18 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
-    console.log('🔧 Assigning remote stream with tracks:', remoteStream.getTracks().length);
+    console.log('🔧 Stream tracks:', remoteStream.getTracks().map(t => `${t.kind}: ${t.enabled}`));
+    console.log('🔧 Video tracks:', remoteStream.getVideoTracks().length);
+    console.log('🔧 Audio tracks:', remoteStream.getAudioTracks().length);
     
     remoteStreamRef.current = remoteStream;
     
     if (remoteVideoRef.current) {
-      console.log('🔧 Video element found, assigning stream');
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.load();
       setHasRemoteStream(true);
       
-      setTimeout(() => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Remote video playing');
-          }).catch(e => {
-            console.log('❌ Play error:', e.message);
-          });
-        }
-      }, 100);
-    } else {
-      console.log('❌ No video element found');
+      console.log('✅ Stream assigned, video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
     }
   };
 
@@ -453,105 +445,107 @@ function VideoCall({ workspaceId }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-2 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
             Video Conference
           </h1>
-          <p className="text-gray-600">Connect face-to-face with your team</p>
+          <p className="text-gray-600 text-sm sm:text-base">Connect face-to-face with your team</p>
         </div>
         
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8">
-          <div className="flex flex-wrap gap-4 mb-8 justify-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-4 sm:p-8">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 mb-6 sm:mb-8 sm:justify-center">
             <button
               onClick={startCall}
               disabled={callState !== 'idle'}
-              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+              className="bg-gradient-to-r from-green-600 to-green-700 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <span>Start Call</span>
+              <span className="hidden sm:inline">Start Call</span>
+              <span className="sm:hidden">Start</span>
             </button>
             
             <button
               onClick={endCall}
               disabled={callState === 'idle'}
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-1 sm:space-x-2 text-sm sm:text-base"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 3l18 18" />
               </svg>
-              <span>End Call</span>
+              <span className="hidden sm:inline">End Call</span>
+              <span className="sm:hidden">End</span>
             </button>
             
             <button
               onClick={toggleMute}
               disabled={!isCallActive}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-1 sm:space-x-2 text-white text-sm sm:text-base ${
                 isMuted 
                   ? 'bg-gradient-to-r from-red-600 to-red-700' 
                   : 'bg-gradient-to-r from-yellow-600 to-yellow-700'
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMuted ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
                 ) : (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                 )}
               </svg>
-              <span>{isMuted ? 'Unmute' : 'Mute'}</span>
+              <span className="hidden sm:inline">{isMuted ? 'Unmute' : 'Mute'}</span>
             </button>
             
             <button
               onClick={toggleVideo}
               disabled={!isCallActive}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-1 sm:space-x-2 text-white text-sm sm:text-base ${
                 isVideoOff 
                   ? 'bg-gradient-to-r from-red-600 to-red-700' 
                   : 'bg-gradient-to-r from-purple-600 to-purple-700'
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isVideoOff ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
                 ) : (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 )}
               </svg>
-              <span>{isVideoOff ? 'Turn On Video' : 'Turn Off Video'}</span>
+              <span className="hidden sm:inline">{isVideoOff ? 'Video On' : 'Video Off'}</span>
             </button>
             
             <button
               onClick={toggleScreenShare}
               disabled={!isCallActive}
-              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center justify-center space-x-1 sm:space-x-2 text-white text-sm sm:text-base ${
                 isScreenSharing 
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700' 
                   : 'bg-gradient-to-r from-gray-600 to-gray-700'
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</span>
+              <span className="hidden sm:inline">{isScreenSharing ? 'Stop Share' : 'Share'}</span>
             </button>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
+            <div className="space-y-2 sm:space-y-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <h3 className="text-lg font-semibold text-gray-900">Your Video</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Your Video</h3>
               </div>
               <div className="relative">
                 <video
                   ref={localVideoRef}
                   autoPlay
                   muted
-                  className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
+                  className="w-full h-48 sm:h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
                 />
                 {!localStream && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
@@ -566,18 +560,22 @@ function VideoCall({ workspaceId }) {
               </div>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               <div className="flex items-center space-x-2">
                 <div className={`w-3 h-3 rounded-full ${currentCall ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                <h3 className="text-lg font-semibold text-gray-900">Remote Video</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Remote Video</h3>
               </div>
               <div className="relative">
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  className="w-full h-80 bg-green-500"
-                  onLoadedMetadata={() => console.log('📺 Remote video metadata loaded')}
+                  muted={false}
+                  className="w-full h-48 sm:h-80 bg-green-500"
+                  onLoadedMetadata={(e) => {
+                    console.log('📺 Metadata loaded - dimensions:', e.target.videoWidth, 'x', e.target.videoHeight);
+                    console.log('📺 Duration:', e.target.duration);
+                  }}
                   onPlay={() => console.log('▶️ Remote video started playing')}
                   onError={(e) => console.log('❌ Remote video error:', e)}
                   onCanPlay={() => console.log('🎥 Remote video can play')}
@@ -612,12 +610,12 @@ function VideoCall({ workspaceId }) {
           </div>
           
           {callState !== 'idle' && (
-            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="mt-4 sm:mt-8 p-3 sm:p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="flex items-center space-x-2">
                 <div className={`w-2 h-2 rounded-full ${
                   callState === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
                 }`}></div>
-                <p className="text-green-800 font-medium">
+                <p className="text-green-800 font-medium text-sm sm:text-base">
                   {callState === 'calling' && 'Connecting...'}
                   {callState === 'connected' && 'Call is active'}
                   {callState === 'ending' && 'Ending call...'}
