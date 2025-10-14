@@ -238,8 +238,10 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream');
-        handleRemoteStream(remoteStream);
-        setCallState('connected');
+        if (callState === 'calling') {
+          handleRemoteStream(remoteStream);
+          setCallState('connected');
+        }
       });
 
       call.on('close', () => {
@@ -316,31 +318,29 @@ function VideoCall({ workspaceId }) {
     remoteStreamRef.current = remoteStream;
     
     if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      // Stop any existing playback first
+      remoteVideoRef.current.pause();
+      remoteVideoRef.current.srcObject = null;
       
-      // Handle video play with proper error handling
-      const playVideo = async () => {
-        try {
+      // Small delay to ensure cleanup
+      setTimeout(() => {
+        if (remoteVideoRef.current && !isCleaningUpRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
           remoteVideoRef.current.muted = true;
-          await remoteVideoRef.current.play();
           
-          setTimeout(() => {
-            if (remoteVideoRef.current && !isCleaningUpRef.current) {
-              remoteVideoRef.current.muted = false;
+          remoteVideoRef.current.onloadedmetadata = () => {
+            if (!isCleaningUpRef.current) {
+              remoteVideoRef.current.play().then(() => {
+                setTimeout(() => {
+                  if (remoteVideoRef.current && !isCleaningUpRef.current) {
+                    remoteVideoRef.current.muted = false;
+                  }
+                }, 1000);
+              }).catch(() => {});
             }
-          }, 1000);
-        } catch (error) {
-          console.log('Video play error (will retry):', error.message);
-          // Retry after a short delay
-          setTimeout(() => {
-            if (remoteVideoRef.current && !isCleaningUpRef.current) {
-              playVideo();
-            }
-          }, 500);
+          };
         }
-      };
-      
-      playVideo();
+      }, 100);
     }
   };
 
