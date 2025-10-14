@@ -8,6 +8,7 @@ import MultiVideoCall from './components/MultiVideoCall';
 import Whiteboard from './components/Whiteboard';
 import Footer from './components/Footer';
 import InviteModal from './components/InviteModal';
+import CameraTest from './components/CameraTest';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -156,6 +157,16 @@ function App() {
                     </svg>
                     <span className="hidden sm:inline">Invite</span>
                   </button>
+                  <button
+                    onClick={() => setCurrentView('cameratest')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                      currentView === 'cameratest' 
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg' 
+                        : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Test</span>
+                  </button>
                 </>
               )}
               <button
@@ -194,6 +205,9 @@ function App() {
         )}
         {currentView === 'whiteboard' && currentWorkspace && (
           <Whiteboard workspaceId={currentWorkspace.id} />
+        )}
+        {currentView === 'cameratest' && (
+          <CameraTest />
         )}
         
         {showInviteModal && currentWorkspace && (
