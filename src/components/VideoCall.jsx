@@ -236,10 +236,14 @@ function VideoCall({ workspaceId }) {
       setCurrentCall(call);
       currentCallRef.current = call;
       
+      let streamReceived = false;
       call.on('stream', (remoteStream) => {
-        console.log('🎥 Received remote stream');
-        handleRemoteStream(remoteStream);
-        setCallState('connected');
+        if (!streamReceived) {
+          console.log('🎥 Received remote stream');
+          handleRemoteStream(remoteStream);
+          setCallState('connected');
+          streamReceived = true;
+        }
       });
 
       call.on('close', () => {
@@ -287,10 +291,14 @@ function VideoCall({ workspaceId }) {
       currentCallRef.current = call;
       setIsCallActive(true);
       
+      let incomingStreamReceived = false;
       call.on('stream', (remoteStream) => {
-        console.log('🎥 Incoming call - received remote stream');
-        handleRemoteStream(remoteStream);
-        setCallState('connected');
+        if (!incomingStreamReceived) {
+          console.log('🎥 Incoming call - received remote stream');
+          handleRemoteStream(remoteStream);
+          setCallState('connected');
+          incomingStreamReceived = true;
+        }
       });
 
       call.on('close', () => {
@@ -309,10 +317,13 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
-    console.log('🔧 handleRemoteStream called with:', remoteStream);
-    console.log('🔧 Stream tracks:', remoteStream.getTracks());
-    console.log('🔧 Video element exists:', !!remoteVideoRef.current);
-    console.log('🔧 Cleanup flag:', isCleaningUpRef.current);
+    // Prevent duplicate assignments
+    if (remoteStreamRef.current === remoteStream) {
+      console.log('🚫 Ignoring duplicate stream assignment');
+      return;
+    }
+    
+    console.log('🔧 handleRemoteStream called with new stream');
     
     if (remoteStreamRef.current) {
       remoteStreamRef.current.getTracks().forEach(track => track.stop());
@@ -321,26 +332,8 @@ function VideoCall({ workspaceId }) {
     remoteStreamRef.current = remoteStream;
     
     if (remoteVideoRef.current && !isCleaningUpRef.current) {
-      console.log('🔧 Assigning stream to video element');
       remoteVideoRef.current.srcObject = remoteStream;
-      
-      console.log('🔧 Video element srcObject after assignment:', remoteVideoRef.current.srcObject);
-      
-      // Try to play immediately
-      remoteVideoRef.current.play().then(() => {
-        console.log('✅ Remote video playing successfully');
-      }).catch((error) => {
-        console.log('❌ Play failed:', error);
-        // Force a retry
-        setTimeout(() => {
-          if (remoteVideoRef.current && remoteStreamRef.current) {
-            console.log('🔄 Retrying video play');
-            remoteVideoRef.current.play().catch(e => console.log('❌ Retry failed:', e));
-          }
-        }, 1000);
-      });
-    } else {
-      console.log('❌ Cannot assign stream - video ref missing or cleaning up');
+      console.log('✅ Remote stream assigned successfully');
     }
   };
 
