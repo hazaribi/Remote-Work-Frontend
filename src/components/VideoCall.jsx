@@ -238,7 +238,7 @@ function VideoCall({ workspaceId }) {
       currentCallRef.current = call;
       
       call.on('stream', (remoteStream) => {
-        console.log('🎥 Received remote stream');
+        console.log('🎥 Outgoing call - received remote stream');
         handleRemoteStream(remoteStream);
         setCallState('connected');
       });
@@ -261,10 +261,17 @@ function VideoCall({ workspaceId }) {
   const handleIncomingCall = async (call) => {
     console.log('📞 Handling incoming call from:', call.peer);
     
-    if (currentCallRef.current || callState === 'connected') {
-      console.log('🚫 Already in a call, rejecting incoming call');
+    if (currentCallRef.current && callState === 'connected') {
+      console.log('🚫 Already connected, rejecting incoming call');
       call.close();
       return;
+    }
+    
+    // If we have an outgoing call that hasn't connected, replace it
+    if (currentCallRef.current && callState === 'calling') {
+      console.log('🔄 Replacing outgoing call with incoming call');
+      currentCallRef.current.close();
+      currentCallRef.current = null;
     }
     
     try {
