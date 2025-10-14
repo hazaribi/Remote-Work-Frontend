@@ -620,6 +620,12 @@ function VideoCall({ workspaceId }) {
                       console.log('🕰️ Video time updating');
                       console.log('🕰️ Current time:', remoteVideoRef.current.currentTime);
                       console.log('🕰️ Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+                      
+                      if (remoteVideoRef.current.videoWidth === 0 && remoteVideoRef.current.videoHeight === 0) {
+                        console.log('⚠️ Video has 0x0 dimensions - no actual video content');
+                        setHasRemoteStream(false);
+                      }
+                      
                       remoteVideoRef.current.hasLoggedTimeUpdate = true;
                     }
                   }}
