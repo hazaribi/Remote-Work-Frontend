@@ -30,6 +30,7 @@ function VideoCall({ workspaceId }) {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [remoteStreamAssigned, setRemoteStreamAssigned] = useState(false);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -184,19 +185,20 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream:', remoteStream);
-        if (remoteVideoRef.current) {
-          // Clear any existing stream first
-          remoteVideoRef.current.srcObject = null;
-          setTimeout(() => {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.muted = true;
-            remoteVideoRef.current.play().then(() => {
-              console.log('✅ Video playing');
-              setTimeout(() => {
+        if (remoteVideoRef.current && !remoteStreamAssigned) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          setRemoteStreamAssigned(true);
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Video playing');
+            setTimeout(() => {
+              if (remoteVideoRef.current) {
                 remoteVideoRef.current.muted = false;
-              }, 1000);
-            }).catch(e => console.log('❌ Play error:', e));
-          }, 100);
+              }
+            }, 1000);
+          }).catch(e => console.log('❌ Play error:', e));
+        } else if (remoteStreamAssigned) {
+          console.log('📺 Remote stream already assigned, ignoring');
         }
       });
 
@@ -236,19 +238,20 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Incoming call - received remote stream:', remoteStream);
-        if (remoteVideoRef.current) {
-          // Clear any existing stream first
-          remoteVideoRef.current.srcObject = null;
-          setTimeout(() => {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.muted = true;
-            remoteVideoRef.current.play().then(() => {
-              console.log('✅ Incoming video playing');
-              setTimeout(() => {
+        if (remoteVideoRef.current && !remoteStreamAssigned) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          setRemoteStreamAssigned(true);
+          remoteVideoRef.current.muted = true;
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Incoming video playing');
+            setTimeout(() => {
+              if (remoteVideoRef.current) {
                 remoteVideoRef.current.muted = false;
-              }, 1000);
-            }).catch(e => console.log('❌ Incoming play error:', e));
-          }, 100);
+              }
+            }, 1000);
+          }).catch(e => console.log('❌ Incoming play error:', e));
+        } else if (remoteStreamAssigned) {
+          console.log('📺 Incoming stream already assigned, ignoring');
         }
       });
 
@@ -280,6 +283,7 @@ function VideoCall({ workspaceId }) {
     
     setCurrentCall(null);
     setIsCallActive(false);
+    setRemoteStreamAssigned(false);
     
     if (socket) {
       socket.emit('end_call', { workspaceId });
