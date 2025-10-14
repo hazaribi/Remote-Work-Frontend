@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Peer from 'peerjs';
 import io from 'socket.io-client';
 
@@ -22,14 +22,17 @@ function MultiVideoCall({ workspaceId }) {
   const [myPeerId, setMyPeerId] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState(new Map());
-  const [participants, setParticipants] = useState([]);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [connectionState, setConnectionState] = useState('idle'); // idle, joining, active
   
   const localVideoRef = useRef(null);
-  const remoteVideoRefs = useRef({});
+  const peerRef = useRef(null);
+  const socketRef = useRef(null);
   const peerConnections = useRef(new Map());
+  const pendingCalls = useRef(new Set());
+  const isCleaningUpRef = useRef(false);
 
   useEffect(() => {
     initSocket();
@@ -37,35 +40,77 @@ function MultiVideoCall({ workspaceId }) {
     return () => cleanup();
   }, [workspaceId]);
 
-  const cleanup = () => {
-    if (peer) peer.destroy();
-    if (socket) socket.disconnect();
+  const cleanup = useCallback(() => {
+    if (isCleaningUpRef.current) return;
+    isCleaningUpRef.current = true;
+
+    peerConnections.current.forEach(call => {
+      try {
+        call.close();
+      } catch (e) {
+        console.log('Error closing call:', e);
+      }
+    });
+    peerConnections.current.clear();
+    
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
     }
-    peerConnections.current.forEach(call => call.close());
-  };
+    
+    // Clean up remote streams
+    remoteStreams.forEach(stream => {
+      stream.getTracks().forEach(track => track.stop());
+    });
+    
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+  }, [localStream, remoteStreams]);
 
   const initPeer = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+
     const newPeer = new Peer(PEER_CONFIG);
 
     newPeer.on('open', (id) => {
-      console.log('Peer connected with ID:', id);
+      console.log('Multi-peer connected with ID:', id);
       setMyPeerId(id);
-      if (socket) {
-        socket.emit('peer_joined', { workspaceId, peerId: id });
+      if (socketRef.current && isCallActive) {
+        socketRef.current.emit('peer_joined', { workspaceId, peerId: id });
       }
     });
 
     newPeer.on('call', (call) => {
-      console.log('Incoming call from:', call.peer);
-      handleIncomingCall(call);
+      console.log('Incoming multi-call from:', call.peer);
+      if (!pendingCalls.current.has(call.peer)) {
+        handleIncomingCall(call);
+      } else {
+        console.log('Call already pending from:', call.peer);
+        call.close();
+      }
+    });
+
+    newPeer.on('error', (error) => {
+      console.error('Multi-peer error:', error);
     });
 
     setPeer(newPeer);
+    peerRef.current = newPeer;
   };
 
   const initSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
     const token = localStorage.getItem('token');
     const newSocket = io(SOCKET_URL, { auth: { token } });
 
@@ -74,26 +119,39 @@ function MultiVideoCall({ workspaceId }) {
     });
 
     newSocket.on('peer_joined', (data) => {
-      console.log('Peer joined:', data);
-      if (data.peerId !== myPeerId && localStream) {
-        makeCall(data.peerId);
+      console.log('Multi-peer joined:', data);
+      if (data.peerId !== myPeerId && localStream && isCallActive) {
+        // Small delay to avoid race conditions
+        setTimeout(() => {
+          if (!peerConnections.current.has(data.peerId)) {
+            makeCall(data.peerId);
+          }
+        }, 500);
       }
     });
 
-    newSocket.on('participants_list', (data) => {
-      setParticipants(data.participants || []);
-    });
-
     newSocket.on('peer_left', (data) => {
-      console.log('Peer left:', data.peerId);
+      console.log('Multi-peer left:', data.peerId);
       removePeer(data.peerId);
     });
 
     setSocket(newSocket);
+    socketRef.current = newSocket;
   };
 
   const startCall = async () => {
+    if (connectionState !== 'idle') {
+      console.log('Already joining/in call');
+      return;
+    }
+
     try {
+      setConnectionState('joining');
+      
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true
@@ -105,85 +163,183 @@ function MultiVideoCall({ workspaceId }) {
       }
       
       setIsCallActive(true);
+      setConnectionState('active');
       
-      if (socket && myPeerId) {
-        socket.emit('peer_joined', { workspaceId, peerId: myPeerId });
+      if (socketRef.current && peerRef.current) {
+        socketRef.current.emit('peer_joined', { workspaceId, peerId: peerRef.current.id });
       }
     } catch (error) {
       console.error('Error accessing camera/microphone:', error);
+      setConnectionState('idle');
       alert('Error: ' + error.message);
     }
   };
 
   const makeCall = async (remotePeerId) => {
-    if (!peer || !localStream) return;
+    if (!peerRef.current || !localStream || peerConnections.current.has(remotePeerId)) {
+      return;
+    }
     
-    console.log('Making call to:', remotePeerId);
-    const call = peer.call(remotePeerId, localStream);
+    console.log('Making multi-call to:', remotePeerId);
+    pendingCalls.current.add(remotePeerId);
     
-    if (call) {
-      peerConnections.current.set(remotePeerId, call);
+    try {
+      const call = peerRef.current.call(remotePeerId, localStream);
       
-      call.on('stream', (remoteStream) => {
-        console.log('Received stream from:', remotePeerId);
-        setRemoteStreams(prev => new Map(prev.set(remotePeerId, remoteStream)));
-      });
+      if (call) {
+        peerConnections.current.set(remotePeerId, call);
+        
+        call.on('stream', (remoteStream) => {
+          console.log('Received multi-stream from:', remotePeerId);
+          setRemoteStreams(prev => {
+            const newMap = new Map(prev);
+            // Clean up old stream if exists
+            const oldStream = newMap.get(remotePeerId);
+            if (oldStream) {
+              oldStream.getTracks().forEach(track => track.stop());
+            }
+            newMap.set(remotePeerId, remoteStream);
+            return newMap;
+          });
+          pendingCalls.current.delete(remotePeerId);
+        });
 
-      call.on('close', () => {
-        removePeer(remotePeerId);
-      });
+        call.on('close', () => {
+          console.log('Multi-call closed:', remotePeerId);
+          removePeer(remotePeerId);
+        });
+
+        call.on('error', (error) => {
+          console.error('Multi-call error:', error);
+          removePeer(remotePeerId);
+        });
+      }
+    } catch (error) {
+      console.error('Error making multi-call:', error);
+      pendingCalls.current.delete(remotePeerId);
     }
   };
 
   const handleIncomingCall = async (call) => {
-    if (!localStream) {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
-      });
-      setLocalStream(stream);
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+    if (peerConnections.current.has(call.peer)) {
+      console.log('Already connected to:', call.peer);
+      call.close();
+      return;
     }
 
-    call.answer(localStream);
-    peerConnections.current.set(call.peer, call);
-    setIsCallActive(true);
-    
-    call.on('stream', (remoteStream) => {
-      console.log('Incoming stream from:', call.peer);
-      setRemoteStreams(prev => new Map(prev.set(call.peer, remoteStream)));
-    });
+    pendingCalls.current.add(call.peer);
 
-    call.on('close', () => {
-      removePeer(call.peer);
-    });
+    try {
+      let streamToAnswer = localStream;
+      
+      if (!streamToAnswer) {
+        streamToAnswer = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        setLocalStream(streamToAnswer);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = streamToAnswer;
+        }
+        setIsCallActive(true);
+        setConnectionState('active');
+      }
+
+      call.answer(streamToAnswer);
+      peerConnections.current.set(call.peer, call);
+      
+      call.on('stream', (remoteStream) => {
+        console.log('Incoming multi-stream from:', call.peer);
+        setRemoteStreams(prev => {
+          const newMap = new Map(prev);
+          // Clean up old stream if exists
+          const oldStream = newMap.get(call.peer);
+          if (oldStream) {
+            oldStream.getTracks().forEach(track => track.stop());
+          }
+          newMap.set(call.peer, remoteStream);
+          return newMap;
+        });
+        pendingCalls.current.delete(call.peer);
+      });
+
+      call.on('close', () => {
+        console.log('Incoming multi-call closed:', call.peer);
+        removePeer(call.peer);
+      });
+
+      call.on('error', (error) => {
+        console.error('Incoming multi-call error:', error);
+        removePeer(call.peer);
+      });
+    } catch (error) {
+      console.error('Error handling incoming multi-call:', error);
+      pendingCalls.current.delete(call.peer);
+      call.close();
+    }
   };
 
   const removePeer = (peerId) => {
+    // Clean up stream
     setRemoteStreams(prev => {
       const newMap = new Map(prev);
+      const stream = newMap.get(peerId);
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
       newMap.delete(peerId);
       return newMap;
     });
+    
+    // Clean up connection
+    const connection = peerConnections.current.get(peerId);
+    if (connection) {
+      try {
+        connection.close();
+      } catch (e) {
+        console.log('Error closing connection:', e);
+      }
+    }
     peerConnections.current.delete(peerId);
+    pendingCalls.current.delete(peerId);
   };
 
   const endCall = () => {
-    peerConnections.current.forEach(call => call.close());
+    if (connectionState === 'idle') return;
+    setConnectionState('idle');
+
+    // Close all peer connections
+    peerConnections.current.forEach(call => {
+      try {
+        call.close();
+      } catch (e) {
+        console.log('Error closing call:', e);
+      }
+    });
     peerConnections.current.clear();
+    pendingCalls.current.clear();
     
+    // Stop local stream
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
     }
     
+    // Clean up remote streams
+    remoteStreams.forEach(stream => {
+      stream.getTracks().forEach(track => track.stop());
+    });
     setRemoteStreams(new Map());
+    
+    // Clear video element
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    
     setIsCallActive(false);
     
-    if (socket) {
-      socket.emit('peer_left', { workspaceId, peerId: myPeerId });
+    if (socketRef.current && myPeerId) {
+      socketRef.current.emit('peer_left', { workspaceId, peerId: myPeerId });
     }
   };
 
@@ -268,15 +424,37 @@ function MultiVideoCall({ workspaceId }) {
     };
 
     useEffect(() => {
-      if (videoRef.current && stream) {
+      if (videoRef.current && stream && !isCleaningUpRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        videoRef.current.play().then(() => {
-          setTimeout(() => {
-            videoRef.current.muted = false;
-          }, 1000);
-        }).catch(console.error);
+        
+        const playVideo = async () => {
+          try {
+            videoRef.current.muted = true;
+            await videoRef.current.play();
+            
+            setTimeout(() => {
+              if (videoRef.current && !isCleaningUpRef.current) {
+                videoRef.current.muted = false;
+              }
+            }, 1000);
+          } catch (error) {
+            console.log('Multi-video play error (will retry):', error.message);
+            setTimeout(() => {
+              if (videoRef.current && !isCleaningUpRef.current) {
+                playVideo();
+              }
+            }, 500);
+          }
+        };
+        
+        playVideo();
       }
+      
+      return () => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
+      };
     }, [stream]);
 
     return (
@@ -308,7 +486,7 @@ function MultiVideoCall({ workspaceId }) {
           <div className="flex flex-wrap gap-4 mb-8 justify-center">
             <button
               onClick={startCall}
-              disabled={isCallActive}
+              disabled={connectionState !== 'idle'}
               className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
             >
               <span>Join Call</span>
@@ -316,7 +494,7 @@ function MultiVideoCall({ workspaceId }) {
             
             <button
               onClick={endCall}
-              disabled={!isCallActive}
+              disabled={connectionState === 'idle'}
               className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
             >
               <span>Leave Call</span>
@@ -345,16 +523,23 @@ function MultiVideoCall({ workspaceId }) {
 
           <VideoGrid />
           
-          {isCallActive && (
+          {connectionState !== 'idle' && (
             <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <p className="text-green-800 font-medium">Call is active</p>
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${
+                    connectionState === 'active' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <p className="text-green-800 font-medium">
+                    {connectionState === 'joining' && 'Joining call...'}
+                    {connectionState === 'active' && 'Call is active'}
+                  </p>
                 </div>
-                <p className="text-green-700 text-sm">
-                  {remoteStreams.size + 1} participant{remoteStreams.size !== 0 ? 's' : ''}
-                </p>
+                {connectionState === 'active' && (
+                  <p className="text-green-700 text-sm">
+                    {remoteStreams.size + 1} participant{remoteStreams.size !== 0 ? 's' : ''}
+                  </p>
+                )}
               </div>
             </div>
           )}

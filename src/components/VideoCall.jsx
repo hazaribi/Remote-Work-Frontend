@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Peer from 'peerjs';
 import io from 'socket.io-client';
 
 const SOCKET_URL = 'https://remote-work-backend.onrender.com';
-// Use public PeerJS server for now
 const PEER_CONFIG = {
   host: '0.peerjs.com',
   port: 443,
@@ -21,49 +20,85 @@ function VideoCall({ workspaceId }) {
   const [peer, setPeer] = useState(null);
   const [socket, setSocket] = useState(null);
   const [myPeerId, setMyPeerId] = useState(null);
-  const peerIdRef = useRef(null);
-  const peerRef = useRef(null);
-
   const [localStream, setLocalStream] = useState(null);
   const [currentCall, setCurrentCall] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [assignedStreamId, setAssignedStreamId] = useState(null);
+  const [callState, setCallState] = useState('idle'); // idle, calling, connected, ending
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const peerRef = useRef(null);
+  const socketRef = useRef(null);
+  const currentCallRef = useRef(null);
+  const remoteStreamRef = useRef(null);
+  const isCleaningUpRef = useRef(false);
 
   useEffect(() => {
     initSocket();
     initPeer();
 
     return () => {
-      if (peer) peer.destroy();
-      if (socket) socket.disconnect();
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
+      cleanup();
     };
   }, [workspaceId]);
 
+  const cleanup = useCallback(() => {
+    if (isCleaningUpRef.current) return;
+    isCleaningUpRef.current = true;
+
+    if (currentCallRef.current) {
+      currentCallRef.current.close();
+    }
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    // Clear video elements
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+  }, [localStream]);
+
   const initPeer = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+
     const newPeer = new Peer(PEER_CONFIG);
 
     newPeer.on('open', (id) => {
       console.log('Peer connected with ID:', id);
       setMyPeerId(id);
-      peerIdRef.current = id;
     });
 
     newPeer.on('call', (call) => {
       console.log('Incoming call from:', call.peer);
-      handleIncomingCall(call);
+      if (callState === 'idle' || callState === 'calling') {
+        handleIncomingCall(call);
+      } else {
+        console.log('Rejecting call - already in call');
+        call.close();
+      }
     });
 
     newPeer.on('error', (error) => {
       console.error('Peer error:', error);
+      setCallState('idle');
     });
 
     setPeer(newPeer);
@@ -71,6 +106,10 @@ function VideoCall({ workspaceId }) {
   };
 
   const initSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
     const token = localStorage.getItem('token');
     const newSocket = io(SOCKET_URL, {
       auth: { token }
@@ -80,9 +119,20 @@ function VideoCall({ workspaceId }) {
       newSocket.emit('join_workspace', workspaceId);
     });
 
-    newSocket.on('incoming_call', (data) => {
-      if (peer && data.peerId) {
-        makeCall(data.peerId);
+    newSocket.on('user_calling', (data) => {
+      console.log('🔔 User is calling:', data);
+      
+      if (callState !== 'idle') {
+        console.log('❌ Ignoring call - already in call state:', callState);
+        return;
+      }
+      
+      if (peerRef.current && data.peerId && data.peerId !== myPeerId) {
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (data.userId !== currentUser.id) {
+          console.log('✅ Making call to peer:', data.peerId);
+          makeCall(data.peerId);
+        }
       }
     });
 
@@ -91,30 +141,19 @@ function VideoCall({ workspaceId }) {
       endCall();
     });
 
-    newSocket.on('user_calling', (data) => {
-      console.log('🔔 User is calling:', data);
-      const currentPeerId = peerIdRef.current;
-      console.log('📱 My peer ID:', currentPeerId);
-      console.log('👤 My user ID:', JSON.parse(localStorage.getItem('user')).id);
-      console.log('🔍 Peer ready?', !!peerRef.current);
-      console.log('🆔 Different peer?', data.peerId !== myPeerId);
-      console.log('👥 Different user?', data.userId !== JSON.parse(localStorage.getItem('user')).id);
-      
-      // Only connect to different peers (ignore same user's other tabs)
-      if (peerRef.current && currentPeerId && data.peerId && data.peerId !== currentPeerId) {
-        console.log('✅ Making call to peer:', data.peerId);
-        makeCall(data.peerId);
-      } else {
-        console.log('❌ Ignoring call - same peer or invalid data');
-      }
-    });
-
     setSocket(newSocket);
+    socketRef.current = newSocket;
   };
 
   const startCall = async () => {
+    if (callState !== 'idle') {
+      console.log('Call already in progress');
+      return;
+    }
+
     try {
-      // Stop any existing stream first
+      setCallState('calling');
+      
       if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
       }
@@ -129,23 +168,35 @@ function VideoCall({ workspaceId }) {
         localVideoRef.current.srcObject = stream;
       }
       
-      if (socket && peer) {
-        console.log('Broadcasting call with peer ID:', peer.id);
-        socket.emit('user_calling', {
+      if (socketRef.current && peerRef.current) {
+        console.log('Broadcasting call with peer ID:', peerRef.current.id);
+        socketRef.current.emit('user_calling', {
           workspaceId,
-          peerId: peer.id
+          peerId: peerRef.current.id
         });
       }
       
       setIsCallActive(true);
     } catch (error) {
       console.error('Error accessing camera/microphone:', error);
-      alert('Error: ' + error.message + '. Please close other tabs using camera or refresh the page.');
+      setCallState('idle');
+      alert('Error: ' + error.message);
     }
   };
 
   const makeCall = async (remotePeerId) => {
+    if (callState !== 'calling' && callState !== 'idle') {
+      console.log('Cannot make call in current state:', callState);
+      return;
+    }
+
+    if (currentCallRef.current) {
+      console.log('Call already exists, ignoring');
+      return;
+    }
+
     console.log('Making call to:', remotePeerId);
+    setCallState('calling');
     
     let streamToUse = localStream;
     
@@ -161,45 +212,34 @@ function VideoCall({ workspaceId }) {
         }
       } catch (error) {
         console.error('Error accessing camera/microphone:', error);
+        setCallState('idle');
         return;
       }
     }
 
     if (!peerRef.current) {
       console.error('Peer not initialized');
+      setCallState('idle');
       return;
     }
 
-    console.log('Calling peer with stream:', streamToUse);
-    
     try {
       const call = peerRef.current.call(remotePeerId, streamToUse);
       
       if (!call) {
-        console.error('Failed to create call - peer may be disconnected');
+        console.error('Failed to create call');
+        setCallState('idle');
         return;
       }
       
-      console.log('✅ Call created successfully:', call);
+      console.log('✅ Call created successfully');
       setCurrentCall(call);
+      currentCallRef.current = call;
       
       call.on('stream', (remoteStream) => {
-        console.log('🎥 Received remote stream:', remoteStream);
-        if (remoteVideoRef.current && assignedStreamId !== remoteStream.id) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          setAssignedStreamId(remoteStream.id);
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Video playing');
-            setTimeout(() => {
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.muted = false;
-              }
-            }, 1000);
-          }).catch(e => console.log('❌ Play error:', e));
-        } else {
-          console.log('📺 Stream already assigned or duplicate, ignoring');
-        }
+        console.log('🎥 Received remote stream');
+        handleRemoteStream(remoteStream);
+        setCallState('connected');
       });
 
       call.on('close', () => {
@@ -209,15 +249,25 @@ function VideoCall({ workspaceId }) {
 
       call.on('error', (error) => {
         console.error('Call error:', error);
+        setCallState('idle');
       });
     } catch (error) {
       console.error('Error making call:', error);
+      setCallState('idle');
     }
   };
 
   const handleIncomingCall = async (call) => {
     console.log('📞 Handling incoming call from:', call.peer);
+    
+    if (currentCallRef.current || callState === 'connected') {
+      console.log('🚫 Already in a call, rejecting incoming call');
+      call.close();
+      return;
+    }
+    
     try {
+      setCallState('calling');
       let streamToAnswer = localStream;
       
       if (!streamToAnswer) {
@@ -231,47 +281,88 @@ function VideoCall({ workspaceId }) {
         }
       }
 
-      console.log('📞 Answering call with stream:', streamToAnswer);
+      console.log('📞 Answering call');
       call.answer(streamToAnswer);
       setCurrentCall(call);
+      currentCallRef.current = call;
       setIsCallActive(true);
       
       call.on('stream', (remoteStream) => {
-        console.log('🎥 Incoming call - received remote stream:', remoteStream);
-        if (remoteVideoRef.current && assignedStreamId !== remoteStream.id) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          setAssignedStreamId(remoteStream.id);
-          remoteVideoRef.current.muted = true;
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Incoming video playing');
-            setTimeout(() => {
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.muted = false;
-              }
-            }, 1000);
-          }).catch(e => console.log('❌ Incoming play error:', e));
-        } else {
-          console.log('📺 Incoming stream already assigned or duplicate, ignoring');
-        }
+        console.log('🎥 Incoming call - received remote stream');
+        handleRemoteStream(remoteStream);
+        setCallState('connected');
       });
 
       call.on('close', () => {
         console.log('Incoming call closed by remote user');
         endCall();
       });
+
+      call.on('error', (error) => {
+        console.error('Incoming call error:', error);
+        setCallState('idle');
+      });
     } catch (error) {
       console.error('Error handling incoming call:', error);
+      setCallState('idle');
+    }
+  };
+
+  const handleRemoteStream = (remoteStream) => {
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    
+    remoteStreamRef.current = remoteStream;
+    
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      
+      // Handle video play with proper error handling
+      const playVideo = async () => {
+        try {
+          remoteVideoRef.current.muted = true;
+          await remoteVideoRef.current.play();
+          
+          setTimeout(() => {
+            if (remoteVideoRef.current && !isCleaningUpRef.current) {
+              remoteVideoRef.current.muted = false;
+            }
+          }, 1000);
+        } catch (error) {
+          console.log('Video play error (will retry):', error.message);
+          // Retry after a short delay
+          setTimeout(() => {
+            if (remoteVideoRef.current && !isCleaningUpRef.current) {
+              playVideo();
+            }
+          }, 500);
+        }
+      };
+      
+      playVideo();
     }
   };
 
   const endCall = () => {
-    if (currentCall) {
-      currentCall.close();
+    if (callState === 'ending') return;
+    setCallState('ending');
+
+    if (currentCallRef.current) {
+      currentCallRef.current.close();
+      currentCallRef.current = null;
     }
+    
     if (localStream) {
       localStream.getTracks().forEach(track => track.stop());
       setLocalStream(null);
     }
+    
+    if (remoteStreamRef.current) {
+      remoteStreamRef.current.getTracks().forEach(track => track.stop());
+      remoteStreamRef.current = null;
+    }
+    
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
     }
@@ -279,15 +370,16 @@ function VideoCall({ workspaceId }) {
       remoteVideoRef.current.srcObject = null;
     }
     
-
-    
     setCurrentCall(null);
     setIsCallActive(false);
-    setAssignedStreamId(null);
     
-    if (socket) {
-      socket.emit('end_call', { workspaceId });
+    if (socketRef.current) {
+      socketRef.current.emit('end_call', { workspaceId });
     }
+    
+    setTimeout(() => {
+      setCallState('idle');
+    }, 1000);
   };
 
   const toggleMute = () => {
@@ -309,9 +401,10 @@ function VideoCall({ workspaceId }) {
   };
 
   const toggleScreenShare = async () => {
+    if (!currentCallRef.current) return;
+
     try {
       if (isScreenSharing) {
-        // Stop screen sharing, return to camera
         const stream = await navigator.mediaDevices.getUserMedia({
           video: true,
           audio: true
@@ -322,10 +415,9 @@ function VideoCall({ workspaceId }) {
           localVideoRef.current.srcObject = stream;
         }
         
-        // Replace track in current call
-        if (currentCall && currentCall.peerConnection) {
+        if (currentCallRef.current && currentCallRef.current.peerConnection) {
           const videoTrack = stream.getVideoTracks()[0];
-          const sender = currentCall.peerConnection.getSenders().find(s => 
+          const sender = currentCallRef.current.peerConnection.getSenders().find(s => 
             s.track && s.track.kind === 'video'
           );
           if (sender) {
@@ -335,13 +427,11 @@ function VideoCall({ workspaceId }) {
         
         setIsScreenSharing(false);
       } else {
-        // Start screen sharing
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: true
         });
         
-        // Keep audio from original stream
         const audioTrack = localStream?.getAudioTracks()[0];
         if (audioTrack) {
           screenStream.addTrack(audioTrack);
@@ -352,10 +442,9 @@ function VideoCall({ workspaceId }) {
           localVideoRef.current.srcObject = screenStream;
         }
         
-        // Replace track in current call
-        if (currentCall && currentCall.peerConnection) {
+        if (currentCallRef.current && currentCallRef.current.peerConnection) {
           const videoTrack = screenStream.getVideoTracks()[0];
-          const sender = currentCall.peerConnection.getSenders().find(s => 
+          const sender = currentCallRef.current.peerConnection.getSenders().find(s => 
             s.track && s.track.kind === 'video'
           );
           if (sender) {
@@ -365,9 +454,10 @@ function VideoCall({ workspaceId }) {
         
         setIsScreenSharing(true);
         
-        // Auto-stop when user stops sharing
         screenStream.getVideoTracks()[0].onended = () => {
-          toggleScreenShare();
+          if (!isCleaningUpRef.current) {
+            toggleScreenShare();
+          }
         };
       }
     } catch (error) {
@@ -390,7 +480,7 @@ function VideoCall({ workspaceId }) {
           <div className="flex flex-wrap gap-4 mb-8 justify-center">
             <button
               onClick={startCall}
-              disabled={isCallActive}
+              disabled={callState !== 'idle'}
               className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -401,7 +491,7 @@ function VideoCall({ workspaceId }) {
             
             <button
               onClick={endCall}
-              disabled={!isCallActive}
+              disabled={callState === 'idle'}
               className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,7 +593,7 @@ function VideoCall({ workspaceId }) {
                   className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
                   style={{ display: 'block' }}
                 />
-                {!currentCall && (
+                {callState === 'idle' && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
                     <div className="text-center text-white">
                       <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,15 +603,29 @@ function VideoCall({ workspaceId }) {
                     </div>
                   </div>
                 )}
+                {callState === 'calling' && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl">
+                    <div className="text-center text-white">
+                      <div className="w-16 h-16 mx-auto mb-4 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      <p className="text-sm opacity-75">Connecting...</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
           
-          {isCallActive && (
+          {callState !== 'idle' && (
             <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-xl">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="text-green-800 font-medium">Call is active</p>
+                <div className={`w-2 h-2 rounded-full ${
+                  callState === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
+                }`}></div>
+                <p className="text-green-800 font-medium">
+                  {callState === 'calling' && 'Connecting...'}
+                  {callState === 'connected' && 'Call is active'}
+                  {callState === 'ending' && 'Ending call...'}
+                </p>
               </div>
             </div>
           )}
