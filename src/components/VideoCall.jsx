@@ -29,6 +29,7 @@ function VideoCall({ workspaceId }) {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -272,8 +273,7 @@ function VideoCall({ workspaceId }) {
       remoteVideoRef.current.srcObject = null;
     }
     
-    // Reset stream assignment flag
-    streamAssignedRef.current = false;
+
     
     setCurrentCall(null);
     setIsCallActive(false);
@@ -298,6 +298,74 @@ function VideoCall({ workspaceId }) {
         track.enabled = isVideoOff;
       });
       setIsVideoOff(!isVideoOff);
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    try {
+      if (isScreenSharing) {
+        // Stop screen sharing, return to camera
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+        
+        setLocalStream(stream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        
+        // Replace track in current call
+        if (currentCall && currentCall.peerConnection) {
+          const videoTrack = stream.getVideoTracks()[0];
+          const sender = currentCall.peerConnection.getSenders().find(s => 
+            s.track && s.track.kind === 'video'
+          );
+          if (sender) {
+            await sender.replaceTrack(videoTrack);
+          }
+        }
+        
+        setIsScreenSharing(false);
+      } else {
+        // Start screen sharing
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+        
+        // Keep audio from original stream
+        const audioTrack = localStream?.getAudioTracks()[0];
+        if (audioTrack) {
+          screenStream.addTrack(audioTrack);
+        }
+        
+        setLocalStream(screenStream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = screenStream;
+        }
+        
+        // Replace track in current call
+        if (currentCall && currentCall.peerConnection) {
+          const videoTrack = screenStream.getVideoTracks()[0];
+          const sender = currentCall.peerConnection.getSenders().find(s => 
+            s.track && s.track.kind === 'video'
+          );
+          if (sender) {
+            await sender.replaceTrack(videoTrack);
+          }
+        }
+        
+        setIsScreenSharing(true);
+        
+        // Auto-stop when user stops sharing
+        screenStream.getVideoTracks()[0].onended = () => {
+          toggleScreenShare();
+        };
+      }
+    } catch (error) {
+      console.error('Screen sharing error:', error);
+      alert('Screen sharing failed: ' + error.message);
     }
   };
 
@@ -371,6 +439,21 @@ function VideoCall({ workspaceId }) {
                 )}
               </svg>
               <span>{isVideoOff ? 'Turn On Video' : 'Turn Off Video'}</span>
+            </button>
+            
+            <button
+              onClick={toggleScreenShare}
+              disabled={!isCallActive}
+              className={`px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2 text-white ${
+                isScreenSharing 
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700' 
+                  : 'bg-gradient-to-r from-gray-600 to-gray-700'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <span>{isScreenSharing ? 'Stop Sharing' : 'Share Screen'}</span>
             </button>
           </div>
 
