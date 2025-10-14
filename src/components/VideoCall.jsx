@@ -572,13 +572,10 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  muted
-                  controls={false}
-                  className="w-full h-40 sm:h-80 bg-green-500 rounded-lg sm:rounded-2xl object-cover"
-                  style={{ backgroundColor: hasRemoteStream ? 'transparent' : '#10b981' }}
-                  onLoadedMetadata={(e) => console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight)}
+                  muted={false}
+                  className="w-full h-40 sm:h-80 bg-black rounded-lg sm:rounded-2xl"
+                  onLoadedMetadata={(e) => console.log('📺 Metadata:', e.target.videoWidth, 'x', e.target.videoHeight)}
                   onPlay={() => console.log('▶️ Video playing')}
-                  onTimeUpdate={() => console.log('🕰️ Video time update - playing content')}
                 />
                 {!hasRemoteStream && (
                   <div className="absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center">
