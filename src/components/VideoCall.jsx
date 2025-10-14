@@ -27,6 +27,7 @@ function VideoCall({ workspaceId }) {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [callState, setCallState] = useState('idle'); // idle, calling, connected, ending
+  const [hasRemoteStream, setHasRemoteStream] = useState(false);
   
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -236,14 +237,10 @@ function VideoCall({ workspaceId }) {
       setCurrentCall(call);
       currentCallRef.current = call;
       
-      let streamReceived = false;
       call.on('stream', (remoteStream) => {
-        if (!streamReceived) {
-          console.log('🎥 Received remote stream');
-          handleRemoteStream(remoteStream);
-          setCallState('connected');
-          streamReceived = true;
-        }
+        console.log('🎥 Received remote stream');
+        handleRemoteStream(remoteStream);
+        setCallState('connected');
       });
 
       call.on('close', () => {
@@ -291,14 +288,10 @@ function VideoCall({ workspaceId }) {
       currentCallRef.current = call;
       setIsCallActive(true);
       
-      let incomingStreamReceived = false;
       call.on('stream', (remoteStream) => {
-        if (!incomingStreamReceived) {
-          console.log('🎥 Incoming call - received remote stream');
-          handleRemoteStream(remoteStream);
-          setCallState('connected');
-          incomingStreamReceived = true;
-        }
+        console.log('🎥 Incoming call - received remote stream');
+        handleRemoteStream(remoteStream);
+        setCallState('connected');
       });
 
       call.on('close', () => {
@@ -317,29 +310,28 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
-    // Prevent duplicate assignments
-    if (remoteStreamRef.current === remoteStream) {
-      console.log('🚫 Ignoring duplicate stream assignment');
-      return;
-    }
+    console.log('🔧 Assigning remote stream');
     
-    console.log('🔧 handleRemoteStream called with new stream');
-    
-    if (remoteStreamRef.current) {
+    if (remoteStreamRef.current && remoteStreamRef.current !== remoteStream) {
       remoteStreamRef.current.getTracks().forEach(track => track.stop());
     }
     
     remoteStreamRef.current = remoteStream;
+    setHasRemoteStream(true);
     
     if (remoteVideoRef.current && !isCleaningUpRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
-      console.log('✅ Remote stream assigned successfully');
+      console.log('✅ Remote video assigned');
     }
   };
 
   const endCall = () => {
     if (callState === 'ending') return;
-    setCallState('ending');
+    
+    setCallState('idle');
+    setIsCallActive(false);
+    setCurrentCall(null);
+    setHasRemoteStream(false);
 
     if (currentCallRef.current) {
       currentCallRef.current.close();
@@ -363,16 +355,9 @@ function VideoCall({ workspaceId }) {
       remoteVideoRef.current.srcObject = null;
     }
     
-    setCurrentCall(null);
-    setIsCallActive(false);
-    
     if (socketRef.current) {
       socketRef.current.emit('end_call', { workspaceId });
     }
-    
-    setTimeout(() => {
-      setCallState('idle');
-    }, 1000);
   };
 
   const toggleMute = () => {
@@ -591,7 +576,7 @@ function VideoCall({ workspaceId }) {
                   onPlay={() => console.log('▶️ Remote video started playing')}
                   onError={(e) => console.log('❌ Remote video error:', e)}
                 />
-                {!remoteStreamRef.current && (
+                {!hasRemoteStream && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
                     <div className="text-center text-white">
                       {callState === 'idle' && (
