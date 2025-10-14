@@ -321,11 +321,16 @@ function VideoCall({ workspaceId }) {
     
     if (videoTrack) {
       console.log('🔧 Video track muted:', videoTrack.muted);
+      console.log('🔧 Video track enabled:', videoTrack.enabled);
+      console.log('🔧 Video track readyState:', videoTrack.readyState);
       console.log('🔧 Video track settings:', videoTrack.getSettings());
       
-      if (videoTrack.muted) {
+      // Try to unmute the track if it's muted but enabled
+      if (videoTrack.muted && videoTrack.enabled && videoTrack.readyState === 'live') {
+        console.log('🔄 Attempting to handle muted but live video track');
+        // Force assign stream anyway - sometimes muted tracks still have video
+      } else if (videoTrack.muted) {
         console.log('⚠️ Remote video track is muted - no video content available');
-        // Show placeholder for muted video
         setHasRemoteStream(false);
         return;
       }
@@ -341,6 +346,13 @@ function VideoCall({ workspaceId }) {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.play().then(() => {
             console.log('✅ Playing - dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+            
+            // Check if video is actually displaying content
+            setTimeout(() => {
+              if (remoteVideoRef.current && remoteVideoRef.current.videoWidth === 0) {
+                console.log('⚠️ Video element has no dimensions - may be empty stream');
+              }
+            }, 1000);
           }).catch(e => console.log('❌ Play failed:', e.message));
         }
       }, 500);
@@ -594,12 +606,18 @@ function VideoCall({ workspaceId }) {
                   className="w-full h-40 sm:h-80 bg-black rounded-lg sm:rounded-2xl"
                   onLoadedMetadata={(e) => {
                     console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
-                    console.log('📺 Video duration:', e.target.duration);
-                    console.log('📺 Video tracks:', e.target.srcObject?.getVideoTracks().map(t => t.getSettings()));
+                    if (e.target.videoWidth > 0 && e.target.videoHeight > 0) {
+                      console.log('✅ Video has valid dimensions - should be visible');
+                    }
                   }}
                   onPlay={() => console.log('▶️ Video playing')}
-                  onLoadStart={() => console.log('📄 Load start')}
-                  onCanPlay={() => console.log('🎥 Can play')}
+                  onTimeUpdate={() => {
+                    // Only log once to avoid spam
+                    if (!remoteVideoRef.current?.hasLoggedTimeUpdate) {
+                      console.log('🕰️ Video time updating - content is playing');
+                      remoteVideoRef.current.hasLoggedTimeUpdate = true;
+                    }
+                  }}
                   onError={(e) => console.log('❌ Video error:', e.target.error)}
                 />
                 {!hasRemoteStream && (
