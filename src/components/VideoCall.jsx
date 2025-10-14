@@ -313,16 +313,19 @@ function VideoCall({ workspaceId }) {
     console.log('🔧 Stream tracks:', remoteStream.getTracks().map(t => `${t.kind}: ${t.enabled}`));
     
     remoteStreamRef.current = remoteStream;
+    setHasRemoteStream(true);
     
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
-      setHasRemoteStream(true);
       
-      // Force video to load and play
-      remoteVideoRef.current.onloadedmetadata = () => {
-        console.log('✅ Video loaded:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-        remoteVideoRef.current.play().catch(e => console.log('Play error:', e));
-      };
+      // Force immediate play
+      setTimeout(() => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.play().then(() => {
+            console.log('✅ Remote video playing, dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+          }).catch(e => console.log('❌ Play failed:', e.message));
+        }
+      }, 500);
     }
   };
 
@@ -570,10 +573,12 @@ function VideoCall({ workspaceId }) {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-40 sm:h-80 bg-green-500 rounded-lg sm:rounded-2xl"
-                  onLoadedMetadata={(e) => console.log('📺 Metadata:', e.target.videoWidth, 'x', e.target.videoHeight)}
-                  onPlay={() => console.log('▶️ Playing')}
-                  onCanPlay={() => console.log('🎥 Can play')}
+                  controls={false}
+                  className="w-full h-40 sm:h-80 bg-green-500 rounded-lg sm:rounded-2xl object-cover"
+                  style={{ backgroundColor: hasRemoteStream ? 'transparent' : '#10b981' }}
+                  onLoadedMetadata={(e) => console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight)}
+                  onPlay={() => console.log('▶️ Video playing')}
+                  onTimeUpdate={() => console.log('🕰️ Video time update - playing content')}
                 />
                 {!hasRemoteStream && (
                   <div className="absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center">
