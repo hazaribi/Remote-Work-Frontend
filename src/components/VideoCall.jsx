@@ -238,10 +238,8 @@ function VideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('🎥 Received remote stream');
-        if (callState === 'calling') {
-          handleRemoteStream(remoteStream);
-          setCallState('connected');
-        }
+        handleRemoteStream(remoteStream);
+        setCallState('connected');
       });
 
       call.on('close', () => {
@@ -317,30 +315,20 @@ function VideoCall({ workspaceId }) {
     
     remoteStreamRef.current = remoteStream;
     
-    if (remoteVideoRef.current) {
-      // Stop any existing playback first
-      remoteVideoRef.current.pause();
-      remoteVideoRef.current.srcObject = null;
+    if (remoteVideoRef.current && !isCleaningUpRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.autoplay = true;
+      remoteVideoRef.current.playsInline = true;
       
-      // Small delay to ensure cleanup
-      setTimeout(() => {
-        if (remoteVideoRef.current && !isCleaningUpRef.current) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.muted = true;
-          
-          remoteVideoRef.current.onloadedmetadata = () => {
-            if (!isCleaningUpRef.current) {
-              remoteVideoRef.current.play().then(() => {
-                setTimeout(() => {
-                  if (remoteVideoRef.current && !isCleaningUpRef.current) {
-                    remoteVideoRef.current.muted = false;
-                  }
-                }, 1000);
-              }).catch(() => {});
-            }
-          };
-        }
-      }, 100);
+      // Force play without waiting for metadata
+      remoteVideoRef.current.play().catch(() => {
+        // Retry if failed
+        setTimeout(() => {
+          if (remoteVideoRef.current && !isCleaningUpRef.current) {
+            remoteVideoRef.current.play().catch(() => {});
+          }
+        }, 500);
+      });
     }
   };
 
@@ -593,21 +581,23 @@ function VideoCall({ workspaceId }) {
                   className="w-full h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-lg object-cover"
                   style={{ display: 'block' }}
                 />
-                {callState === 'idle' && (
+                {!remoteStreamRef.current && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
                     <div className="text-center text-white">
-                      <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <p className="text-sm opacity-75">Waiting for participant</p>
-                    </div>
-                  </div>
-                )}
-                {callState === 'calling' && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-800 rounded-2xl">
-                    <div className="text-center text-white">
-                      <div className="w-16 h-16 mx-auto mb-4 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <p className="text-sm opacity-75">Connecting...</p>
+                      {callState === 'idle' && (
+                        <>
+                          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                          <p className="text-sm opacity-75">Waiting for participant</p>
+                        </>
+                      )}
+                      {(callState === 'calling' || callState === 'connected') && (
+                        <>
+                          <div className="w-16 h-16 mx-auto mb-4 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <p className="text-sm opacity-75">Connecting...</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
