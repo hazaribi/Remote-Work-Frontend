@@ -310,16 +310,18 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
-    console.log('🔧 Stream ID:', remoteStream.id);
-    console.log('🔧 Stream active:', remoteStream.active);
-    
     const videoTrack = remoteStream.getVideoTracks()[0];
+    
     if (videoTrack) {
-      console.log('🔧 Video track ID:', videoTrack.id);
-      console.log('🔧 Video track enabled:', videoTrack.enabled);
       console.log('🔧 Video track muted:', videoTrack.muted);
-      console.log('🔧 Video track readyState:', videoTrack.readyState);
       console.log('🔧 Video track settings:', videoTrack.getSettings());
+      
+      if (videoTrack.muted) {
+        console.log('⚠️ Remote video track is muted - no video content available');
+        // Show placeholder for muted video
+        setHasRemoteStream(false);
+        return;
+      }
     }
     
     remoteStreamRef.current = remoteStream;
@@ -330,11 +332,6 @@ function VideoCall({ workspaceId }) {
       
       setTimeout(() => {
         if (remoteVideoRef.current) {
-          console.log('🔧 Video element paused:', remoteVideoRef.current.paused);
-          console.log('🔧 Video element muted:', remoteVideoRef.current.muted);
-          console.log('🔧 Video element readyState:', remoteVideoRef.current.readyState);
-          console.log('🔧 Video element networkState:', remoteVideoRef.current.networkState);
-          
           remoteVideoRef.current.play().then(() => {
             console.log('✅ Playing - dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
           }).catch(e => console.log('❌ Play failed:', e.message));
@@ -599,25 +596,28 @@ function VideoCall({ workspaceId }) {
                   onError={(e) => console.log('❌ Video error:', e.target.error)}
                 />
                 {!hasRemoteStream && (
-                  <div className="absolute inset-0 bg-blue-500 rounded-2xl flex items-center justify-center">
-                    <p className="text-white">No Remote Stream</p>
-                  </div>
-                )}
-                {!hasRemoteStream && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl">
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-2xl">
                     <div className="text-center text-white">
                       {callState === 'idle' && (
                         <>
-                          <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-8 h-8 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                           </svg>
-                          <p className="text-sm opacity-75">Waiting for participant</p>
+                          <p className="text-xs sm:text-sm opacity-75">Waiting for participant</p>
                         </>
                       )}
-                      {(callState === 'calling' || callState === 'connected') && (
+                      {callState === 'connected' && (
                         <>
-                          <div className="w-16 h-16 mx-auto mb-4 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          <p className="text-sm opacity-75">Connecting...</p>
+                          <svg className="w-8 h-8 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                          </svg>
+                          <p className="text-xs sm:text-sm opacity-75">Remote video disabled</p>
+                        </>
+                      )}
+                      {callState === 'calling' && (
+                        <>
+                          <div className="w-8 h-8 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-4 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          <p className="text-xs sm:text-sm opacity-75">Connecting...</p>
                         </>
                       )}
                     </div>
