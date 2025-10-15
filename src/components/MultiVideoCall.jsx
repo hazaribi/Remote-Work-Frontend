@@ -320,15 +320,21 @@ function MultiVideoCall({ workspaceId }) {
       call.on('stream', (remoteStream) => {
         console.log('Incoming multi-stream from:', call.peer);
         
-        // Force enable tracks
+        // Use exact same logic as working VideoCall
         const videoTrack = remoteStream.getVideoTracks()[0];
         const audioTrack = remoteStream.getAudioTracks()[0];
-        if (videoTrack) videoTrack.enabled = true;
-        if (audioTrack) audioTrack.enabled = true;
+        
+        if (videoTrack) {
+          console.log('Incoming multi-video track - muted:', videoTrack.muted, 'enabled:', videoTrack.enabled, 'readyState:', videoTrack.readyState);
+          console.log('Incoming multi-video track settings:', videoTrack.getSettings());
+          videoTrack.enabled = true;
+        }
+        if (audioTrack) {
+          audioTrack.enabled = true;
+        }
         
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
-          // Clean up old stream if exists
           const oldStream = newMap.get(call.peer);
           if (oldStream) {
             oldStream.getTracks().forEach(track => track.stop());
