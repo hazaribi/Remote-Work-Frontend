@@ -126,8 +126,9 @@ function MultiVideoCall({ workspaceId }) {
         console.log('Attempting to call peer:', data.peerId);
         
         // Auto-join call if not already active
-        if (!isCallActive && !localStream) {
+        if (!isCallActive && !localStream && connectionState === 'idle') {
           console.log('Auto-joining call for peer connection');
+          setConnectionState('joining');
           startCall().then(() => {
             setTimeout(() => {
               if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
