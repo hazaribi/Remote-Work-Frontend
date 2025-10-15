@@ -8,8 +8,7 @@ import MultiVideoCall from './components/MultiVideoCall';
 import Whiteboard from './components/Whiteboard';
 import Footer from './components/Footer';
 import InviteModal from './components/InviteModal';
-import CameraTest from './components/CameraTest';
-import SimpleVideoCall from './components/SimpleVideoCall';
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -71,9 +70,9 @@ function App() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setCurrentView('dashboard')}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                   currentView === 'dashboard' 
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg' 
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105' 
                     : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
                 }`}
               >
@@ -86,9 +85,9 @@ function App() {
                 <>
                   <button
                     onClick={() => setCurrentView('tasks')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                       currentView === 'tasks' 
-                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg' 
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg scale-105' 
                         : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
                     }`}
                   >
@@ -99,9 +98,9 @@ function App() {
                   </button>
                   <button
                     onClick={() => setCurrentView('chat')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                       currentView === 'chat' 
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg' 
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg scale-105' 
                         : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'
                     }`}
                   >
@@ -112,9 +111,9 @@ function App() {
                   </button>
                   <button
                     onClick={() => setCurrentView('video')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                       currentView === 'video' 
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg' 
+                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg scale-105' 
                         : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
                     }`}
                   >
@@ -125,9 +124,9 @@ function App() {
                   </button>
                   <button
                     onClick={() => setCurrentView('multivideo')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                       currentView === 'multivideo' 
-                        ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white shadow-lg' 
+                        ? 'bg-gradient-to-r from-pink-600 to-pink-700 text-white shadow-lg scale-105' 
                         : 'text-gray-600 hover:text-pink-600 hover:bg-pink-50'
                     }`}
                   >
@@ -138,9 +137,9 @@ function App() {
                   </button>
                   <button
                     onClick={() => setCurrentView('whiteboard')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 transform hover:scale-105 ${
                       currentView === 'whiteboard' 
-                        ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg' 
+                        ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg scale-105' 
                         : 'text-gray-600 hover:text-yellow-600 hover:bg-yellow-50'
                     }`}
                   >
@@ -151,38 +150,18 @@ function App() {
                   </button>
                   <button
                     onClick={() => setShowInviteModal(true)}
-                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 text-gray-600 hover:text-green-600 hover:bg-green-50"
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 text-gray-600 hover:text-green-600 hover:bg-green-50 hover:scale-105 transform"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     <span className="hidden sm:inline">Invite</span>
                   </button>
-                  <button
-                    onClick={() => setCurrentView('cameratest')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                      currentView === 'cameratest' 
-                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-lg' 
-                        : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">Test</span>
-                  </button>
-                  <button
-                    onClick={() => setCurrentView('simplevideo')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
-                      currentView === 'simplevideo' 
-                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg' 
-                        : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">Simple</span>
-                  </button>
                 </>
               )}
               <button
                 onClick={handleLogout}
-                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 flex items-center space-x-2"
+                className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-xl text-sm font-medium hover:shadow-xl transform hover:scale-105 hover:-translate-y-1 transition-all duration-300 flex items-center space-x-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -217,12 +196,7 @@ function App() {
         {currentView === 'whiteboard' && currentWorkspace && (
           <Whiteboard workspaceId={currentWorkspace.id} />
         )}
-        {currentView === 'cameratest' && (
-          <CameraTest />
-        )}
-        {currentView === 'simplevideo' && currentWorkspace && (
-          <SimpleVideoCall workspaceId={currentWorkspace.id} />
-        )}
+
         
         {showInviteModal && currentWorkspace && (
           <InviteModal 
