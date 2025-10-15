@@ -646,34 +646,23 @@ function VideoCall({ workspaceId }) {
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
-                  controls
-                  style={{
-                    width: '100%',
-                    height: '160px',
-                    backgroundColor: 'red',
-                    border: '3px solid yellow',
-                    display: 'block'
-                  }}
+                  className="w-full h-40 sm:h-80 bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-2xl shadow-lg object-cover"
                   onLoadedMetadata={(e) => {
                     console.log('📺 Metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
-                    console.log('📺 Video element style:', window.getComputedStyle(e.target));
                   }}
                   onPlay={() => console.log('▶️ Video playing')}
                   onTimeUpdate={() => {
                     if (!remoteVideoRef.current?.hasLoggedTimeUpdate) {
-                      console.log('🕰️ Video time updating');
-                      console.log('🕰️ Current time:', remoteVideoRef.current.currentTime);
-                      console.log('🕰️ Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+                      console.log('📐 Video dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
                       
-                      if (remoteVideoRef.current.videoWidth === 0 && remoteVideoRef.current.videoHeight === 0) {
-                        console.log('⚠️ Video has 0x0 dimensions - no actual video content');
-                        setHasRemoteStream(false);
+                      if (remoteVideoRef.current.videoWidth > 0 && remoteVideoRef.current.videoHeight > 0) {
+                        console.log('✅ Video has valid dimensions');
+                        setHasRemoteStream(true);
                       }
                       
                       remoteVideoRef.current.hasLoggedTimeUpdate = true;
                     }
                   }}
-                  onError={(e) => console.log('❌ Video error:', e.target.error)}
                 />
                 {!hasRemoteStream && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 rounded-lg sm:rounded-2xl">
