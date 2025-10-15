@@ -124,14 +124,19 @@ function MultiVideoCall({ workspaceId }) {
       console.log('Multi-peer joined:', data);
       if (data.peerId && data.peerId !== (myPeerId || peerRef.current?.id)) {
         console.log('Attempting to call peer:', data.peerId);
-        setTimeout(() => {
-          if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
-            console.log('Making call to new peer:', data.peerId);
-            makeCall(data.peerId);
-          } else {
-            console.log('Already connected/connecting to peer:', data.peerId);
-          }
-        }, 1000);
+        // Only make call if we are already active (have joined)
+        if (isCallActive && localStream) {
+          setTimeout(() => {
+            if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
+              console.log('Making call to new peer:', data.peerId);
+              makeCall(data.peerId);
+            } else {
+              console.log('Already connected/connecting to peer:', data.peerId);
+            }
+          }, 1000);
+        } else {
+          console.log('Not active yet, skipping call to:', data.peerId);
+        }
       } else {
         console.log('Skipping call - peerId:', data.peerId, 'myPeerId:', myPeerId || peerRef.current?.id);
       }
