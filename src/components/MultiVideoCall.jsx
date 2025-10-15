@@ -85,6 +85,7 @@ function MultiVideoCall({ workspaceId }) {
       console.log('Multi-peer connected with ID:', id);
       setMyPeerId(id);
       if (socketRef.current && isCallActive) {
+        console.log('Auto-emitting peer_joined for existing call:', id);
         socketRef.current.emit('peer_joined', { workspaceId, peerId: id });
       }
     });
@@ -121,13 +122,19 @@ function MultiVideoCall({ workspaceId }) {
 
     newSocket.on('peer_joined', (data) => {
       console.log('Multi-peer joined:', data);
-      if (data.peerId !== myPeerId && localStream && isCallActive) {
+      if (data.peerId && data.peerId !== myPeerId && localStream && isCallActive) {
+        console.log('Attempting to call peer:', data.peerId);
         // Small delay to avoid race conditions
         setTimeout(() => {
-          if (!peerConnections.current.has(data.peerId)) {
+          if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
+            console.log('Making call to new peer:', data.peerId);
             makeCall(data.peerId);
+          } else {
+            console.log('Already connected/connecting to peer:', data.peerId);
           }
-        }, 500);
+        }, 1000);
+      } else {
+        console.log('Skipping call - peerId:', data.peerId, 'myPeerId:', myPeerId, 'hasStream:', !!localStream, 'isActive:', isCallActive);
       }
     });
 
@@ -174,6 +181,7 @@ function MultiVideoCall({ workspaceId }) {
       setConnectionState('active');
       
       if (socketRef.current && peerRef.current) {
+        console.log('Emitting peer_joined with peerId:', peerRef.current.id);
         socketRef.current.emit('peer_joined', { workspaceId, peerId: peerRef.current.id });
       }
     } catch (error) {
@@ -184,7 +192,13 @@ function MultiVideoCall({ workspaceId }) {
   };
 
   const makeCall = async (remotePeerId) => {
-    if (!peerRef.current || !localStream || peerConnections.current.has(remotePeerId)) {
+    if (!peerRef.current || !localStream) {
+      console.log('Cannot make call - missing peer or stream');
+      return;
+    }
+    
+    if (peerConnections.current.has(remotePeerId)) {
+      console.log('Already connected to:', remotePeerId);
       return;
     }
     
