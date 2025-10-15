@@ -497,29 +497,44 @@ function MultiVideoCall({ workspaceId }) {
 
     useEffect(() => {
       if (videoRef.current && stream && !isCleaningUpRef.current) {
+        console.log('🎥 Setting up remote video for peer:', peerId);
+        
+        // Force enable tracks like in VideoCall
+        const videoTrack = stream.getVideoTracks()[0];
+        const audioTrack = stream.getAudioTracks()[0];
+        if (videoTrack) {
+          videoTrack.enabled = true;
+          console.log('📹 Video track enabled:', videoTrack.enabled, 'muted:', videoTrack.muted);
+        }
+        if (audioTrack) {
+          audioTrack.enabled = true;
+        }
+        
         videoRef.current.srcObject = stream;
+        videoRef.current.load();
         
         const playVideo = async () => {
           try {
-            videoRef.current.muted = true;
             await videoRef.current.play();
+            console.log('✅ Multi-video playing for peer:', peerId);
             
+            // Check dimensions after play
             setTimeout(() => {
               if (videoRef.current && !isCleaningUpRef.current) {
-                videoRef.current.muted = false;
+                console.log('📐 Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
               }
-            }, 1000);
+            }, 500);
           } catch (error) {
             console.log('Multi-video play error (will retry):', error.message);
             setTimeout(() => {
               if (videoRef.current && !isCleaningUpRef.current) {
                 playVideo();
               }
-            }, 500);
+            }, 1000);
           }
         };
         
-        playVideo();
+        setTimeout(playVideo, 100);
       }
       
       return () => {
@@ -527,7 +542,7 @@ function MultiVideoCall({ workspaceId }) {
           videoRef.current.srcObject = null;
         }
       };
-    }, [stream]);
+    }, [stream, peerId]);
 
     return (
       <div className="relative">
