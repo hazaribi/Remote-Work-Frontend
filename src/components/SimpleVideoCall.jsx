@@ -23,13 +23,23 @@ function SimpleVideoCall({ workspaceId }) {
   }, []);
 
   const initPeer = () => {
-    // Use a different PeerJS server
+    // Use default PeerJS with better config
     const newPeer = new Peer({
+      host: 'peerjs-server.herokuapp.com',
+      port: 443,
+      path: '/peerjs',
+      secure: true,
       config: {
         iceServers: [
           { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+          { urls: 'stun:stun1.l.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+          }
+        ],
+        sdpSemantics: 'unified-plan'
       }
     });
 
@@ -40,7 +50,14 @@ function SimpleVideoCall({ workspaceId }) {
 
     newPeer.on('call', (incomingCall) => {
       console.log('Receiving call...');
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { exact: 640 }, 
+          height: { exact: 480 },
+          frameRate: { exact: 30 }
+        }, 
+        audio: true 
+      })
         .then((stream) => {
           setLocalStream(stream);
           if (localVideoRef.current) {
@@ -52,19 +69,22 @@ function SimpleVideoCall({ workspaceId }) {
           
           incomingCall.on('stream', (remoteStream) => {
             console.log('Got remote stream:', remoteStream);
-            console.log('Remote stream tracks:', remoteStream.getTracks());
+            const videoTrack = remoteStream.getVideoTracks()[0];
+            if (videoTrack) {
+              console.log('Video track settings:', videoTrack.getSettings());
+              console.log('Video track muted:', videoTrack.muted);
+              console.log('Video track enabled:', videoTrack.enabled);
+            }
             
             if (remoteVideoRef.current) {
               remoteVideoRef.current.srcObject = remoteStream;
               setIsConnected(true);
               
-              // Force play
-              setTimeout(() => {
-                remoteVideoRef.current.play().then(() => {
-                  console.log('Remote video playing, dimensions:', 
-                    remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-                }).catch(console.error);
-              }, 1000);
+              remoteVideoRef.current.onloadedmetadata = () => {
+                console.log('Metadata loaded, dimensions:', 
+                  remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+                remoteVideoRef.current.play().catch(console.error);
+              };
             }
           });
         })
@@ -88,8 +108,17 @@ function SimpleVideoCall({ workspaceId }) {
   const startCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 640, height: 480 }, 
-        audio: true 
+        video: { 
+          width: { exact: 640 }, 
+          height: { exact: 480 },
+          frameRate: { exact: 30 },
+          facingMode: 'user'
+        }, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
       
       setLocalStream(stream);
@@ -115,18 +144,22 @@ function SimpleVideoCall({ workspaceId }) {
 
     outgoingCall.on('stream', (remoteStream) => {
       console.log('Got remote stream from outgoing call:', remoteStream);
-      console.log('Remote stream tracks:', remoteStream.getTracks());
+      const videoTrack = remoteStream.getVideoTracks()[0];
+      if (videoTrack) {
+        console.log('Video track settings:', videoTrack.getSettings());
+        console.log('Video track muted:', videoTrack.muted);
+        console.log('Video track enabled:', videoTrack.enabled);
+      }
       
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = remoteStream;
         setIsConnected(true);
         
-        setTimeout(() => {
-          remoteVideoRef.current.play().then(() => {
-            console.log('Remote video playing, dimensions:', 
-              remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-          }).catch(console.error);
-        }, 1000);
+        remoteVideoRef.current.onloadedmetadata = () => {
+          console.log('Metadata loaded, dimensions:', 
+            remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
+          remoteVideoRef.current.play().catch(console.error);
+        };
       }
     });
   };
