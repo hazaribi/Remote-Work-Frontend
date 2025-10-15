@@ -197,10 +197,12 @@ function MultiVideoCall({ workspaceId }) {
       return;
     }
     
-    if (!localStream) {
+    let streamToUse = localStream;
+    
+    if (!streamToUse) {
       console.log('No local stream, getting media first');
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
+        streamToUse = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 640, min: 320 },
             height: { ideal: 480, min: 240 },
@@ -211,12 +213,13 @@ function MultiVideoCall({ workspaceId }) {
             noiseSuppression: true
           }
         });
-        setLocalStream(stream);
+        setLocalStream(streamToUse);
         if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.srcObject = streamToUse;
         }
         setIsCallActive(true);
         setConnectionState('active');
+        console.log('✅ Got media stream for call');
       } catch (error) {
         console.error('Error getting media for call:', error);
         return;
@@ -228,11 +231,11 @@ function MultiVideoCall({ workspaceId }) {
       return;
     }
     
-    console.log('Making multi-call to:', remotePeerId);
+    console.log('Making multi-call to:', remotePeerId, 'with stream:', !!streamToUse);
     pendingCalls.current.add(remotePeerId);
     
     try {
-      const call = peerRef.current.call(remotePeerId, localStream);
+      const call = peerRef.current.call(remotePeerId, streamToUse);
       
       if (call) {
         peerConnections.current.set(remotePeerId, call);
