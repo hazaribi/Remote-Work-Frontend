@@ -162,11 +162,14 @@ function VideoCall({ workspaceId }) {
       
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { exact: 640 },
-          height: { exact: 480 },
-          frameRate: { exact: 30 }
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 },
+          frameRate: { ideal: 30, min: 15 }
         },
-        audio: true
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
       
       setLocalStream(stream);
@@ -209,8 +212,15 @@ function VideoCall({ workspaceId }) {
     if (!streamToUse) {
       try {
         streamToUse = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
         });
         setLocalStream(streamToUse);
         if (localVideoRef.current) {
@@ -285,8 +295,15 @@ function VideoCall({ workspaceId }) {
       
       if (!streamToAnswer) {
         streamToAnswer = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
         });
         setLocalStream(streamToAnswer);
         if (localVideoRef.current) {
@@ -322,23 +339,22 @@ function VideoCall({ workspaceId }) {
   };
 
   const handleRemoteStream = (remoteStream) => {
+    console.log('🎥 Handling remote stream with tracks:', remoteStream.getTracks().length);
+    
     const videoTrack = remoteStream.getVideoTracks()[0];
+    const audioTrack = remoteStream.getAudioTracks()[0];
     
     if (videoTrack) {
-      console.log('🔧 Video track muted:', videoTrack.muted);
-      console.log('🔧 Video track enabled:', videoTrack.enabled);
-      console.log('🔧 Video track readyState:', videoTrack.readyState);
+      console.log('🔧 Video track - muted:', videoTrack.muted, 'enabled:', videoTrack.enabled, 'readyState:', videoTrack.readyState);
       console.log('🔧 Video track settings:', videoTrack.getSettings());
       
-      // Try to unmute the track if it's muted but enabled
-      if (videoTrack.muted && videoTrack.enabled && videoTrack.readyState === 'live') {
-        console.log('🔄 Attempting to handle muted but live video track');
-        // Force assign stream anyway - sometimes muted tracks still have video
-      } else if (videoTrack.muted) {
-        console.log('⚠️ Remote video track is muted - no video content available');
-        setHasRemoteStream(false);
-        return;
-      }
+      // Force enable the track
+      videoTrack.enabled = true;
+    }
+    
+    if (audioTrack) {
+      console.log('🔧 Audio track - muted:', audioTrack.muted, 'enabled:', audioTrack.enabled);
+      audioTrack.enabled = true;
     }
     
     remoteStreamRef.current = remoteStream;
@@ -346,21 +362,37 @@ function VideoCall({ workspaceId }) {
     
     if (remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.load();
       
-      setTimeout(() => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.play().then(() => {
-            console.log('✅ Playing - dimensions:', remoteVideoRef.current.videoWidth, 'x', remoteVideoRef.current.videoHeight);
-            
-            // Check if video is actually displaying content
-            setTimeout(() => {
-              if (remoteVideoRef.current && remoteVideoRef.current.videoWidth === 0) {
-                console.log('⚠️ Video element has no dimensions - may be empty stream');
+      const playVideo = () => {
+        remoteVideoRef.current.play().then(() => {
+          console.log('✅ Remote video playing');
+          
+          // Wait for metadata to load
+          const checkDimensions = () => {
+            if (remoteVideoRef.current) {
+              const width = remoteVideoRef.current.videoWidth;
+              const height = remoteVideoRef.current.videoHeight;
+              console.log('📐 Video dimensions:', width, 'x', height);
+              
+              if (width > 0 && height > 0) {
+                console.log('✅ Video has valid dimensions');
+                setHasRemoteStream(true);
+              } else {
+                console.log('⚠️ Video has no dimensions, retrying...');
+                setTimeout(checkDimensions, 500);
               }
-            }, 1000);
-          }).catch(e => console.log('❌ Play failed:', e.message));
-        }
-      }, 500);
+            }
+          };
+          
+          setTimeout(checkDimensions, 100);
+        }).catch(e => {
+          console.log('❌ Play failed:', e.message);
+          setTimeout(playVideo, 1000);
+        });
+      };
+      
+      setTimeout(playVideo, 100);
     }
   };
 
@@ -423,8 +455,15 @@ function VideoCall({ workspaceId }) {
     try {
       if (isScreenSharing) {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
         });
         
         setLocalStream(stream);
