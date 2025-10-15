@@ -4,15 +4,10 @@ import io from 'socket.io-client';
 
 const SOCKET_URL = 'https://remote-work-backend.onrender.com';
 const PEER_CONFIG = {
-  host: 'peerjs-server.herokuapp.com',
-  port: 443,
-  path: '/peerjs',
-  secure: true,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
       {
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
@@ -167,14 +162,11 @@ function VideoCall({ workspaceId }) {
       
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 30 }
+          width: { exact: 640 },
+          height: { exact: 480 },
+          frameRate: { exact: 30 }
         },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
+        audio: true
       });
       
       setLocalStream(stream);
