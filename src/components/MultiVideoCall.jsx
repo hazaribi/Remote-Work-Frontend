@@ -262,9 +262,11 @@ function MultiVideoCall({ workspaceId }) {
           setRemoteStreams(prev => {
             const newMap = new Map(prev);
             const oldStream = newMap.get(remotePeerId);
-            if (oldStream) {
+            if (oldStream && oldStream !== remoteStream) {
+              console.log('Stopping old stream for peer:', remotePeerId);
               oldStream.getTracks().forEach(track => track.stop());
             }
+            console.log('Setting new stream for peer:', remotePeerId, 'tracks:', remoteStream.getTracks().length);
             newMap.set(remotePeerId, remoteStream);
             return newMap;
           });
@@ -341,9 +343,11 @@ function MultiVideoCall({ workspaceId }) {
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
           const oldStream = newMap.get(call.peer);
-          if (oldStream) {
+          if (oldStream && oldStream !== remoteStream) {
+            console.log('Stopping old incoming stream for peer:', call.peer);
             oldStream.getTracks().forEach(track => track.stop());
           }
+          console.log('Setting new incoming stream for peer:', call.peer, 'tracks:', remoteStream.getTracks().length);
           newMap.set(call.peer, remoteStream);
           return newMap;
         });
