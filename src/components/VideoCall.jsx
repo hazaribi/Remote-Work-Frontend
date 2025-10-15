@@ -496,7 +496,7 @@ function VideoCall({ workspaceId }) {
       <div className="w-full max-w-6xl mx-auto px-1 sm:px-0">
         <div className="mb-2 sm:mb-8 text-center">
           <h1 className="text-xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-1 sm:mb-2">
-            Video Conference
+            Video Conference v2
           </h1>
           <p className="text-gray-600 text-xs sm:text-base">Connect face-to-face with your team</p>
         </div>

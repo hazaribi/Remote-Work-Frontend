@@ -9,6 +9,7 @@ import Whiteboard from './components/Whiteboard';
 import Footer from './components/Footer';
 import InviteModal from './components/InviteModal';
 import CameraTest from './components/CameraTest';
+import SimpleVideoCall from './components/SimpleVideoCall';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -167,6 +168,16 @@ function App() {
                   >
                     <span className="hidden sm:inline">Test</span>
                   </button>
+                  <button
+                    onClick={() => setCurrentView('simplevideo')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 flex items-center space-x-2 ${
+                      currentView === 'simplevideo' 
+                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg' 
+                        : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'
+                    }`}
+                  >
+                    <span className="hidden sm:inline">Simple</span>
+                  </button>
                 </>
               )}
               <button
@@ -208,6 +219,9 @@ function App() {
         )}
         {currentView === 'cameratest' && (
           <CameraTest />
+        )}
+        {currentView === 'simplevideo' && currentWorkspace && (
+          <SimpleVideoCall workspaceId={currentWorkspace.id} />
         )}
         
         {showInviteModal && currentWorkspace && (
