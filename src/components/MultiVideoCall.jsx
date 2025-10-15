@@ -122,7 +122,7 @@ function MultiVideoCall({ workspaceId }) {
 
     newSocket.on('peer_joined', (data) => {
       console.log('Multi-peer joined:', data);
-      if (data.peerId && data.peerId !== (myPeerId || peerRef.current?.id) && (localStream || isCallActive)) {
+      if (data.peerId && data.peerId !== (myPeerId || peerRef.current?.id)) {
         console.log('Attempting to call peer:', data.peerId);
         // Small delay to avoid race conditions
         setTimeout(() => {
