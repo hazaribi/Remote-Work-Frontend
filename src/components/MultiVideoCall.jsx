@@ -4,14 +4,15 @@ import io from 'socket.io-client';
 
 const SOCKET_URL = 'https://remote-work-backend.onrender.com';
 const PEER_CONFIG = {
-  host: '0.peerjs.com',
-  port: 443,
-  path: '/',
-  secure: true,
   config: {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
     ]
   }
 };
@@ -153,8 +154,15 @@ function MultiVideoCall({ workspaceId }) {
       }
       
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true
+        video: {
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 },
+          frameRate: { ideal: 30, min: 15 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
       
       setLocalStream(stream);
@@ -191,6 +199,13 @@ function MultiVideoCall({ workspaceId }) {
         
         call.on('stream', (remoteStream) => {
           console.log('Received multi-stream from:', remotePeerId);
+          
+          // Force enable tracks
+          const videoTrack = remoteStream.getVideoTracks()[0];
+          const audioTrack = remoteStream.getAudioTracks()[0];
+          if (videoTrack) videoTrack.enabled = true;
+          if (audioTrack) audioTrack.enabled = true;
+          
           setRemoteStreams(prev => {
             const newMap = new Map(prev);
             // Clean up old stream if exists
@@ -234,8 +249,15 @@ function MultiVideoCall({ workspaceId }) {
       
       if (!streamToAnswer) {
         streamToAnswer = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
         });
         setLocalStream(streamToAnswer);
         if (localVideoRef.current) {
@@ -250,6 +272,13 @@ function MultiVideoCall({ workspaceId }) {
       
       call.on('stream', (remoteStream) => {
         console.log('Incoming multi-stream from:', call.peer);
+        
+        // Force enable tracks
+        const videoTrack = remoteStream.getVideoTracks()[0];
+        const audioTrack = remoteStream.getAudioTracks()[0];
+        if (videoTrack) videoTrack.enabled = true;
+        if (audioTrack) audioTrack.enabled = true;
+        
         setRemoteStreams(prev => {
           const newMap = new Map(prev);
           // Clean up old stream if exists
