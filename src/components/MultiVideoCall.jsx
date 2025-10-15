@@ -124,15 +124,29 @@ function MultiVideoCall({ workspaceId }) {
       console.log('Multi-peer joined:', data);
       if (data.peerId && data.peerId !== (myPeerId || peerRef.current?.id)) {
         console.log('Attempting to call peer:', data.peerId);
-        // Small delay to avoid race conditions
-        setTimeout(() => {
-          if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
-            console.log('Making call to new peer:', data.peerId);
-            makeCall(data.peerId);
-          } else {
-            console.log('Already connected/connecting to peer:', data.peerId);
-          }
-        }, 1000);
+        
+        // Auto-join call if not already active
+        if (!isCallActive && !localStream) {
+          console.log('Auto-joining call for peer connection');
+          startCall().then(() => {
+            setTimeout(() => {
+              if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
+                console.log('Making call to new peer after auto-join:', data.peerId);
+                makeCall(data.peerId);
+              }
+            }, 1000);
+          });
+        } else {
+          // Already have stream, make call directly
+          setTimeout(() => {
+            if (!peerConnections.current.has(data.peerId) && !pendingCalls.current.has(data.peerId)) {
+              console.log('Making call to new peer:', data.peerId);
+              makeCall(data.peerId);
+            } else {
+              console.log('Already connected/connecting to peer:', data.peerId);
+            }
+          }, 1000);
+        }
       } else {
         console.log('Skipping call - peerId:', data.peerId, 'myPeerId:', myPeerId || peerRef.current?.id, 'hasStream:', !!localStream, 'isActive:', isCallActive);
       }
