@@ -218,7 +218,12 @@ function MultiVideoCall({ workspaceId }) {
         }
         setIsCallActive(true);
         setConnectionState('active');
-        console.log('✅ Got media stream for call');
+        console.log('✅ Got media stream for call - tracks:', streamToUse.getTracks().length);
+        
+        // Log track states
+        streamToUse.getTracks().forEach((track, i) => {
+          console.log(`Track ${i}: kind=${track.kind}, enabled=${track.enabled}, readyState=${track.readyState}`);
+        });
       } catch (error) {
         console.error('Error getting media for call:', error);
         return;
@@ -515,6 +520,12 @@ function MultiVideoCall({ workspaceId }) {
         
         if (videoTrack) {
           console.log('🔧 Multi-video track - muted:', videoTrack.muted, 'enabled:', videoTrack.enabled, 'readyState:', videoTrack.readyState);
+          
+          if (videoTrack.readyState === 'ended') {
+            console.log('⚠️ Video track has ended - stream may have been stopped');
+            return; // Don't try to play ended tracks
+          }
+          
           videoTrack.enabled = true;
         }
         if (audioTrack) {
@@ -537,6 +548,8 @@ function MultiVideoCall({ workspaceId }) {
                 
                 if (width > 0 && height > 0) {
                   console.log('✅ Multi-video has valid dimensions');
+                } else if (width === 2 && height === 2) {
+                  console.log('❌ Multi-video showing 2x2 - track likely ended or empty');
                 } else {
                   console.log('⚠️ Multi-video has no dimensions, retrying...');
                   setTimeout(checkDimensions, 500);
