@@ -122,7 +122,7 @@ function MultiVideoCall({ workspaceId }) {
 
     newSocket.on('peer_joined', (data) => {
       console.log('Multi-peer joined:', data);
-      if (data.peerId && data.peerId !== myPeerId && localStream && isCallActive) {
+      if (data.peerId && data.peerId !== (myPeerId || peerRef.current?.id) && (localStream || isCallActive)) {
         console.log('Attempting to call peer:', data.peerId);
         // Small delay to avoid race conditions
         setTimeout(() => {
@@ -134,7 +134,7 @@ function MultiVideoCall({ workspaceId }) {
           }
         }, 1000);
       } else {
-        console.log('Skipping call - peerId:', data.peerId, 'myPeerId:', myPeerId, 'hasStream:', !!localStream, 'isActive:', isCallActive);
+        console.log('Skipping call - peerId:', data.peerId, 'myPeerId:', myPeerId || peerRef.current?.id, 'hasStream:', !!localStream, 'isActive:', isCallActive);
       }
     });
 
@@ -192,9 +192,35 @@ function MultiVideoCall({ workspaceId }) {
   };
 
   const makeCall = async (remotePeerId) => {
-    if (!peerRef.current || !localStream) {
-      console.log('Cannot make call - missing peer or stream');
+    if (!peerRef.current) {
+      console.log('Cannot make call - no peer instance');
       return;
+    }
+    
+    if (!localStream) {
+      console.log('No local stream, getting media first');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 },
+            frameRate: { ideal: 30, min: 15 }
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+        setLocalStream(stream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        setIsCallActive(true);
+        setConnectionState('active');
+      } catch (error) {
+        console.error('Error getting media for call:', error);
+        return;
+      }
     }
     
     if (peerConnections.current.has(remotePeerId)) {
