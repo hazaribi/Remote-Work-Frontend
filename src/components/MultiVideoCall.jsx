@@ -509,12 +509,13 @@ function MultiVideoCall({ workspaceId }) {
       if (videoRef.current && stream && !isCleaningUpRef.current) {
         console.log('🎥 Setting up remote video for peer:', peerId);
         
-        // Force enable tracks like in VideoCall
+        // Use EXACT same logic as working VideoCall
         const videoTrack = stream.getVideoTracks()[0];
         const audioTrack = stream.getAudioTracks()[0];
+        
         if (videoTrack) {
+          console.log('🔧 Multi-video track - muted:', videoTrack.muted, 'enabled:', videoTrack.enabled, 'readyState:', videoTrack.readyState);
           videoTrack.enabled = true;
-          console.log('📹 Video track enabled:', videoTrack.enabled, 'muted:', videoTrack.muted);
         }
         if (audioTrack) {
           audioTrack.enabled = true;
@@ -523,25 +524,31 @@ function MultiVideoCall({ workspaceId }) {
         videoRef.current.srcObject = stream;
         videoRef.current.load();
         
-        const playVideo = async () => {
-          try {
-            await videoRef.current.play();
+        const playVideo = () => {
+          videoRef.current.play().then(() => {
             console.log('✅ Multi-video playing for peer:', peerId);
             
-            // Check dimensions after play
-            setTimeout(() => {
-              if (videoRef.current && !isCleaningUpRef.current) {
-                console.log('📐 Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+            // Wait for metadata to load like VideoCall
+            const checkDimensions = () => {
+              if (videoRef.current) {
+                const width = videoRef.current.videoWidth;
+                const height = videoRef.current.videoHeight;
+                console.log('📐 Multi-video dimensions:', width, 'x', height);
+                
+                if (width > 0 && height > 0) {
+                  console.log('✅ Multi-video has valid dimensions');
+                } else {
+                  console.log('⚠️ Multi-video has no dimensions, retrying...');
+                  setTimeout(checkDimensions, 500);
+                }
               }
-            }, 500);
-          } catch (error) {
-            console.log('Multi-video play error (will retry):', error.message);
-            setTimeout(() => {
-              if (videoRef.current && !isCleaningUpRef.current) {
-                playVideo();
-              }
-            }, 1000);
-          }
+            };
+            
+            setTimeout(checkDimensions, 100);
+          }).catch(e => {
+            console.log('❌ Multi-video play failed:', e.message);
+            setTimeout(playVideo, 1000);
+          });
         };
         
         setTimeout(playVideo, 100);
