@@ -215,7 +215,6 @@ function MultiVideoCall({ workspaceId }) {
         setLocalStream(streamToUse);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = streamToUse;
-          localVideoRef.current.play().catch(e => console.log('Local video play error:', e));
         }
         setIsCallActive(true);
         setConnectionState('active');
