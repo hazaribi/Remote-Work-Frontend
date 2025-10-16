@@ -488,18 +488,17 @@ function MultiVideoCall({ workspaceId }) {
               muted
               playsInline
               className={`w-full ${getVideoHeight()} bg-gray-900 rounded-xl object-cover`}
-              onLoadedMetadata={() => {
+              onLoadedMetadata={(e) => {
+                console.log('🎬 Local video metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
                 if (localVideoRef.current) {
                   localVideoRef.current.play().catch(e => {
                     console.log('Local video play retry:', e.message);
-                    setTimeout(() => {
-                      if (localVideoRef.current) {
-                        localVideoRef.current.play().catch(() => {});
-                      }
-                    }, 100);
                   });
                 }
               }}
+              onPlay={() => console.log('▶️ Local video playing')}
+              onError={(e) => console.log('❌ Local video error:', e.target.error)}
+              style={{ border: '3px solid red' }}
             />
             <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
               You
