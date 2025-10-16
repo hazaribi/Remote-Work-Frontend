@@ -213,8 +213,12 @@ function MultiVideoCall({ workspaceId }) {
           }
         });
         setLocalStream(streamToUse);
+        console.log('🎯 Setting local stream - ref exists:', !!localVideoRef.current, 'stream tracks:', streamToUse.getTracks().length);
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = streamToUse;
+          console.log('✅ Local video srcObject set');
+        } else {
+          console.log('❌ Local video ref is null');
         }
         setIsCallActive(true);
         setConnectionState('active');
@@ -483,18 +487,19 @@ function MultiVideoCall({ workspaceId }) {
         {localStream && (
           <div key="local-video" className="relative">
             <video
-              ref={localVideoRef}
+              ref={(ref) => {
+                localVideoRef.current = ref;
+                if (ref && localStream) {
+                  console.log('🎯 Assigning stream to local video ref');
+                  ref.srcObject = localStream;
+                }
+              }}
               autoPlay
               muted
               playsInline
               className={`w-full ${getVideoHeight()} bg-gray-900 rounded-xl object-cover`}
               onLoadedMetadata={(e) => {
                 console.log('🎬 Local video metadata loaded:', e.target.videoWidth, 'x', e.target.videoHeight);
-                if (localVideoRef.current) {
-                  localVideoRef.current.play().catch(e => {
-                    console.log('Local video play retry:', e.message);
-                  });
-                }
               }}
               onPlay={() => console.log('▶️ Local video playing')}
               onError={(e) => console.log('❌ Local video error:', e.target.error)}
