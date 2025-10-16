@@ -482,12 +482,25 @@ function MultiVideoCall({ workspaceId }) {
     return (
       <div className={`grid ${getGridLayout()} gap-4`}>
         {localStream && (
-          <div className="relative">
+          <div key="local-video" className="relative">
             <video
               ref={localVideoRef}
               autoPlay
               muted
+              playsInline
               className={`w-full ${getVideoHeight()} bg-gray-900 rounded-xl object-cover`}
+              onLoadedMetadata={() => {
+                if (localVideoRef.current) {
+                  localVideoRef.current.play().catch(e => {
+                    console.log('Local video play retry:', e.message);
+                    setTimeout(() => {
+                      if (localVideoRef.current) {
+                        localVideoRef.current.play().catch(() => {});
+                      }
+                    }, 100);
+                  });
+                }
+              }}
             />
             <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
               You
