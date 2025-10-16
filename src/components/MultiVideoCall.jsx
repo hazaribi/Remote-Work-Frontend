@@ -474,11 +474,11 @@ function MultiVideoCall({ workspaceId }) {
 
     const getVideoHeight = () => {
       switch(totalVideos) {
-        case 1: return 'h-80';
-        case 2: return 'h-64';
-        case 3: case 4: return 'h-48';
-        case 5: case 6: return 'h-40';
-        default: return 'h-32';
+        case 1: return 'h-96 md:h-[500px]';
+        case 2: return 'h-80 md:h-96';
+        case 3: case 4: return 'h-64 md:h-80';
+        case 5: case 6: return 'h-48 md:h-64';
+        default: return 'h-40 md:h-48';
       }
     };
 
@@ -503,7 +503,7 @@ function MultiVideoCall({ workspaceId }) {
               }}
               onPlay={() => console.log('▶️ Local video playing')}
               onError={(e) => console.log('❌ Local video error:', e.target.error)}
-              style={{ border: '3px solid red' }}
+
             />
             <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
               You
@@ -524,11 +524,11 @@ function MultiVideoCall({ workspaceId }) {
 
     const getVideoHeight = () => {
       switch(totalVideos) {
-        case 1: return 'h-80';
-        case 2: return 'h-64';
-        case 3: case 4: return 'h-48';
-        case 5: case 6: return 'h-40';
-        default: return 'h-32';
+        case 1: return 'h-96 md:h-[500px]';
+        case 2: return 'h-80 md:h-96';
+        case 3: case 4: return 'h-64 md:h-80';
+        case 5: case 6: return 'h-48 md:h-64';
+        default: return 'h-40 md:h-48';
       }
     };
 
