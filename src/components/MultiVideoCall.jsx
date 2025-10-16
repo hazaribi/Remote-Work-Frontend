@@ -455,6 +455,7 @@ function MultiVideoCall({ workspaceId }) {
 
   const VideoGrid = () => {
     const totalVideos = remoteStreams.size + (localStream ? 1 : 0);
+    console.log('VideoGrid render - localStream exists:', !!localStream, 'remoteStreams:', remoteStreams.size, 'totalVideos:', totalVideos);
     
     const getGridLayout = () => {
       switch(totalVideos) {
