@@ -5,7 +5,7 @@ import TaskBoard from './components/TaskBoard';
 import Chat from './components/Chat';
 import VideoCall from './components/VideoCall';
 import MultiVideoCall from './components/MultiVideoCall';
-import Whiteboard from './components/Whiteboard';
+import WhiteboardEnhanced from './components/WhiteboardEnhanced';
 import Footer from './components/Footer';
 import InviteModal from './components/InviteModal';
 
@@ -87,7 +87,11 @@ function App() {
           {/* Navigation */}
           <nav className="flex-1 px-4 py-6 space-y-2">
             <button
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => {
+                setCurrentView('dashboard');
+                // Auto-close sidebar on mobile after selection
+                if (window.innerWidth < 1024) setSidebarOpen(false);
+              }}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                 currentView === 'dashboard'
                   ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
@@ -103,7 +107,10 @@ function App() {
             {currentWorkspace && (
               <>
                 <button
-                  onClick={() => setCurrentView('tasks')}
+                  onClick={() => {
+                    setCurrentView('tasks');
+                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                  }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                     currentView === 'tasks'
                       ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg'
@@ -117,7 +124,10 @@ function App() {
                 </button>
 
                 <button
-                  onClick={() => setCurrentView('chat')}
+                  onClick={() => {
+                    setCurrentView('chat');
+                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                  }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                     currentView === 'chat'
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg'
@@ -154,7 +164,11 @@ function App() {
                   {videoDropdownOpen && (
                     <div className="mt-2 ml-4 space-y-1">
                       <button
-                        onClick={() => { setCurrentView('video'); setVideoDropdownOpen(false); }}
+                        onClick={() => {
+                          setCurrentView('video');
+                          setVideoDropdownOpen(false);
+                          if (window.innerWidth < 1024) setSidebarOpen(false);
+                        }}
                         className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-all duration-200 ${
                           currentView === 'video'
                             ? 'bg-indigo-100 text-indigo-700'
@@ -167,7 +181,11 @@ function App() {
                         <span>1-on-1 Call</span>
                       </button>
                       <button
-                        onClick={() => { setCurrentView('multivideo'); setVideoDropdownOpen(false); }}
+                        onClick={() => {
+                          setCurrentView('multivideo');
+                          setVideoDropdownOpen(false);
+                          if (window.innerWidth < 1024) setSidebarOpen(false);
+                        }}
                         className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg text-left transition-all duration-200 ${
                           currentView === 'multivideo'
                             ? 'bg-indigo-100 text-indigo-700'
@@ -184,7 +202,10 @@ function App() {
                 </div>
 
                 <button
-                  onClick={() => setCurrentView('whiteboard')}
+                  onClick={() => {
+                    setCurrentView('whiteboard');
+                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                  }}
                   className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
                     currentView === 'whiteboard'
                       ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg'
@@ -198,7 +219,10 @@ function App() {
                 </button>
 
                 <button
-                  onClick={() => setShowInviteModal(true)}
+                  onClick={() => {
+                    setShowInviteModal(true);
+                    if (window.innerWidth < 1024) setSidebarOpen(false);
+                  }}
                   className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 text-gray-700 hover:bg-green-50 hover:text-green-600"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +304,7 @@ function App() {
           <MultiVideoCall workspaceId={currentWorkspace.id} />
         )}
         {currentView === 'whiteboard' && currentWorkspace && (
-          <Whiteboard workspaceId={currentWorkspace.id} />
+          <WhiteboardEnhanced workspaceId={currentWorkspace.id} />
         )}
 
         
