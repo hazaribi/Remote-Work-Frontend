@@ -242,6 +242,9 @@ function WhiteboardEnhanced({ workspaceId }) {
       ctx.beginPath();
       ctx.moveTo(pos.x, pos.y);
       setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);
+    } else if (tool === 'line' || tool === 'rectangle' || tool === 'circle') {
+      redrawCanvas();
+      drawPreview(ctx, startPos, pos);
     }
   };
 
@@ -319,13 +322,35 @@ function WhiteboardEnhanced({ workspaceId }) {
     redrawCanvas();
   };
 
+  const drawPreview = (ctx, start, end) => {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = brushSize;
+    
+    if (tool === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+    } else if (tool === 'rectangle') {
+      const width = end.x - start.x;
+      const height = end.y - start.y;
+      ctx.strokeRect(start.x, start.y, width, height);
+    } else if (tool === 'circle') {
+      const radius = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+      ctx.beginPath();
+      ctx.arc(start.x, start.y, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+  };
+
   const redrawCanvas = () => {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw all saved drawings (pen/eraser strokes)
-    drawings.forEach(drawing => {
+    drawings.forEach((drawing, drawIndex) => {
       if (drawing.length > 0) {
         ctx.beginPath();
         const firstPoint = drawing[0];
@@ -346,6 +371,27 @@ function WhiteboardEnhanced({ workspaceId }) {
         ctx.stroke();
       }
     });
+    
+    // Draw current drawing in progress
+    if (currentDrawing.length > 0) {
+      ctx.beginPath();
+      const firstPoint = currentDrawing[0];
+      ctx.moveTo(firstPoint.x, firstPoint.y);
+      
+      if (firstPoint.tool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = firstPoint.brushSize * 2;
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = firstPoint.color;
+        ctx.lineWidth = firstPoint.brushSize;
+      }
+      
+      currentDrawing.forEach(point => {
+        ctx.lineTo(point.x, point.y);
+      });
+      ctx.stroke();
+    }
     
     // Draw all shapes
     shapes.forEach((shape, index) => {
