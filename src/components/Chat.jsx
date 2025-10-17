@@ -151,7 +151,7 @@ function Chat({ workspaceId }) {
             ) : (
               messages.map((message) => {
                 const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                const isOwnMessage = message.sender?.id === currentUser.id;
+                const isOwnMessage = message.sender_id === currentUser.id || message.users?.id === currentUser.id;
                 
                 return (
                   <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
@@ -162,13 +162,13 @@ function Chat({ workspaceId }) {
                             ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
                             : 'bg-gradient-to-br from-purple-500 to-purple-600'
                         }`}>
-                          {message.sender?.full_name?.charAt(0) || 'U'}
+                          {(message.users?.full_name || message.sender?.full_name || 'Unknown')?.charAt(0)}
                         </div>
                       </div>
                       <div className={`flex-1 ${isOwnMessage ? 'text-right' : ''}`}>
                         <div className={`flex items-center space-x-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
                           <span className="text-sm font-medium text-gray-900">
-                            {isOwnMessage ? 'You' : (message.sender?.full_name || 'Unknown User')}
+                            {isOwnMessage ? 'You' : (message.users?.full_name || message.sender?.full_name || 'Unknown User')}
                           </span>
                           <span className="text-xs text-gray-500">
                             {new Date(message.created_at).toLocaleTimeString()}

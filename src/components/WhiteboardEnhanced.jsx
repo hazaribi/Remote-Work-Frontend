@@ -10,6 +10,8 @@ function WhiteboardEnhanced({ workspaceId }) {
   const [brushSize, setBrushSize] = useState(3);
   const [tool, setTool] = useState('pen');
   const [shapes, setShapes] = useState([]);
+  const [drawings, setDrawings] = useState([]);
+  const [currentDrawing, setCurrentDrawing] = useState([]);
   const [selectedShape, setSelectedShape] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -65,12 +67,15 @@ function WhiteboardEnhanced({ workspaceId }) {
     newSocket.on('whiteboard_draw', (data) => {
       if (data.action === 'shape') {
         setShapes(prev => [...prev, data.data]);
-        redrawCanvas([...shapes, data.data]);
+      } else if (data.action === 'drawing') {
+        setDrawings(prev => [...prev, data.data]);
       }
+      redrawCanvas();
     });
 
     newSocket.on('whiteboard_clear', () => {
       setShapes([]);
+      setDrawings([]);
       clearCanvas();
     });
 
@@ -153,6 +158,7 @@ function WhiteboardEnhanced({ workspaceId }) {
     if (tool === 'pen' || tool === 'eraser') {
       ctxRef.current.beginPath();
       ctxRef.current.moveTo(pos.x, pos.y);
+      setCurrentDrawing([{ x: pos.x, y: pos.y, tool, color, brushSize }]);
     }
   };
 
@@ -185,7 +191,7 @@ function WhiteboardEnhanced({ workspaceId }) {
       }
       
       setShapes(newShapes);
-      redrawCanvas(newShapes);
+      redrawCanvas();
       return;
     }
     
@@ -198,11 +204,13 @@ function WhiteboardEnhanced({ workspaceId }) {
       ctx.lineWidth = brushSize;
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
+      setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);
     } else if (tool === 'eraser') {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.lineWidth = brushSize * 2;
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
+      setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);
     }
   };
 
@@ -253,7 +261,6 @@ function WhiteboardEnhanced({ workspaceId }) {
     if (newShape) {
       const newShapes = [...shapes, newShape];
       setShapes(newShapes);
-      redrawCanvas(newShapes);
       
       if (socket) {
         socket.emit('whiteboard_draw', {
@@ -262,18 +269,55 @@ function WhiteboardEnhanced({ workspaceId }) {
           data: newShape
         });
       }
+    } else if (currentDrawing.length > 0 && (tool === 'pen' || tool === 'eraser')) {
+      const newDrawings = [...drawings, currentDrawing];
+      setDrawings(newDrawings);
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'drawing',
+          data: currentDrawing
+        });
+      }
     }
     
     setIsDrawing(false);
+    setCurrentDrawing([]);
     ctxRef.current.beginPath();
+    redrawCanvas();
   };
 
-  const redrawCanvas = (shapesToDraw = shapes) => {
+  const redrawCanvas = () => {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    shapesToDraw.forEach((shape, index) => {
+    // Draw all saved drawings (pen/eraser strokes)
+    drawings.forEach(drawing => {
+      if (drawing.length > 0) {
+        ctx.beginPath();
+        const firstPoint = drawing[0];
+        ctx.moveTo(firstPoint.x, firstPoint.y);
+        
+        if (firstPoint.tool === 'eraser') {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.lineWidth = firstPoint.brushSize * 2;
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = firstPoint.color;
+          ctx.lineWidth = firstPoint.brushSize;
+        }
+        
+        drawing.forEach(point => {
+          ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+      }
+    });
+    
+    // Draw all shapes
+    shapes.forEach((shape, index) => {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = index === selectedShape ? '#007bff' : shape.color;
       ctx.lineWidth = shape.strokeWidth + (index === selectedShape ? 2 : 0);
@@ -301,6 +345,7 @@ function WhiteboardEnhanced({ workspaceId }) {
     const ctx = ctxRef.current;
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     setShapes([]);
+    setDrawings([]);
     setSelectedShape(null);
     if (socket) {
       socket.emit('whiteboard_clear', { workspaceId });
