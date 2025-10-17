@@ -8,7 +8,10 @@ function Chat({ workspaceId }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [socket, setSocket] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadMessages();
@@ -58,17 +61,66 @@ function Chat({ workspaceId }) {
     setSocket(newSocket);
   };
 
-  const sendMessage = (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
+    if ((!newMessage.trim() && !selectedFile) || !socket) return;
 
-    socket.emit('send_message', {
-      workspaceId,
-      content: newMessage.trim(),
-      messageType: 'text'
-    });
+    if (selectedFile) {
+      await uploadFile();
+    } else {
+      socket.emit('send_message', {
+        workspaceId,
+        content: newMessage.trim(),
+        messageType: 'text'
+      });
+      setNewMessage('');
+    }
+  };
 
-    setNewMessage('');
+  const uploadFile = async () => {
+    if (!selectedFile) return;
+    
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('workspaceId', workspaceId);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE}/upload/file`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        socket.emit('send_message', {
+          workspaceId,
+          content: newMessage.trim() || `Shared a file: ${selectedFile.name}`,
+          messageType: 'file',
+          fileUrl: data.fileUrl,
+          fileName: selectedFile.name
+        });
+        setNewMessage('');
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('File upload failed:', error);
+      alert('File upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size <= 10 * 1024 * 1024) { // 10MB limit
+      setSelectedFile(file);
+    } else {
+      alert('File size must be less than 10MB');
+    }
   };
 
   const scrollToBottom = () => {
@@ -127,7 +179,25 @@ function Chat({ workspaceId }) {
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
                             : 'bg-white border border-gray-200 text-gray-900'
                         }`}>
-                          <p className="text-sm">{message.content}</p>
+                          {message.messageType === 'file' ? (
+                            <div className="flex items-center space-x-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                              </svg>
+                              <a 
+                                href={message.fileUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={`text-sm underline hover:no-underline ${
+                                  isOwnMessage ? 'text-blue-100' : 'text-blue-600'
+                                }`}
+                              >
+                                {message.fileName || 'Download File'}
+                              </a>
+                            </div>
+                          ) : (
+                            <p className="text-sm">{message.content}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -139,23 +209,65 @@ function Chat({ workspaceId }) {
           </div>
           
           <div className="border-t border-gray-200/50 p-6">
-            <form onSubmit={sendMessage} className="flex space-x-4">
+            {selectedFile && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                  <span className="text-sm text-blue-800">{selectedFile.name}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            <form onSubmit={sendMessage} className="flex space-x-2">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type your message..."
+                placeholder={selectedFile ? "Add a message (optional)..." : "Type your message..."}
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileSelect}
+                className="hidden"
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar"
+              />
               <button
-                type="submit"
-                disabled={!newMessage.trim()}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-3 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors flex items-center"
+                title="Attach File"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                 </svg>
-                <span>Send</span>
+              </button>
+              <button
+                type="submit"
+                disabled={(!newMessage.trim() && !selectedFile) || uploading}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:transform-none flex items-center space-x-2"
+              >
+                {uploading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                )}
+                <span>{uploading ? 'Sending...' : 'Send'}</span>
               </button>
             </form>
           </div>
