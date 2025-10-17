@@ -13,6 +13,7 @@ function WhiteboardEnhanced({ workspaceId }) {
   const [drawings, setDrawings] = useState([]);
   const [currentDrawing, setCurrentDrawing] = useState([]);
   const [selectedShape, setSelectedShape] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
@@ -194,22 +195,39 @@ function WhiteboardEnhanced({ workspaceId }) {
     if (tool === 'select') {
       const found = findShapeAtPoint(pos.x, pos.y);
       if (found) {
-        setSelectedShape(found);
-        setIsDragging(true);
-        if (found.type === 'shape') {
-          const shape = shapes[found.index];
-          setDragOffset({
-            x: pos.x - (shape.x || shape.centerX || shape.startX),
-            y: pos.y - (shape.y || shape.centerY || shape.startY)
-          });
+        if (e.ctrlKey || e.metaKey) {
+          const itemKey = `${found.type}_${found.index}`;
+          if (selectedItems.some(item => `${item.type}_${item.index}` === itemKey)) {
+            setSelectedItems(prev => prev.filter(item => `${item.type}_${item.index}` !== itemKey));
+          } else {
+            setSelectedItems(prev => [...prev, found]);
+          }
+          setSelectedShape(null);
         } else {
-          const drawing = drawings[found.index];
-          if (drawing.length > 0) {
-            setDragOffset({ x: pos.x - drawing[0].x, y: pos.y - drawing[0].y });
+          setSelectedShape(found);
+          setSelectedItems([]);
+          setIsDragging(true);
+          if (found.type === 'shape') {
+            const shape = shapes[found.index];
+            setDragOffset({
+              x: pos.x - (shape.x || shape.centerX || shape.startX),
+              y: pos.y - (shape.y || shape.centerY || shape.startY)
+            });
+          } else {
+            const drawing = drawings[found.index];
+            if (drawing.length > 0) {
+              setDragOffset({ x: pos.x - drawing[0].x, y: pos.y - drawing[0].y });
+            }
           }
         }
       } else {
-        setSelectedShape(null);
+        if (selectedItems.length > 0) {
+          setIsDragging(true);
+          setDragOffset({ x: pos.x, y: pos.y });
+        } else {
+          setSelectedShape(null);
+          setSelectedItems([]);
+        }
       }
       redrawCanvas();
       return;
@@ -230,7 +248,45 @@ function WhiteboardEnhanced({ workspaceId }) {
   const draw = (e) => {
     const pos = getMousePos(e);
     
-    if (tool === 'select' && isDragging && selectedShape !== null) {
+    if (tool === 'select' && isDragging && (selectedShape !== null || selectedItems.length > 0)) {
+      if (selectedItems.length > 0) {
+        const offsetX = pos.x - dragOffset.x;
+        const offsetY = pos.y - dragOffset.y;
+        
+        const newDrawings = [...drawings];
+        const newShapes = [...shapes];
+        
+        selectedItems.forEach(item => {
+          if (item.type === 'drawing') {
+            newDrawings[item.index].forEach(point => {
+              point.x += offsetX;
+              point.y += offsetY;
+            });
+          } else if (item.type === 'shape') {
+            const shape = newShapes[item.index];
+            switch (shape.type) {
+              case 'rectangle':
+                shape.x += offsetX;
+                shape.y += offsetY;
+                break;
+              case 'circle':
+                shape.centerX += offsetX;
+                shape.centerY += offsetY;
+                break;
+              case 'line':
+                shape.startX += offsetX;
+                shape.startY += offsetY;
+                shape.endX += offsetX;
+                shape.endY += offsetY;
+                break;
+            }
+          }
+        });
+        
+        setDrawings(newDrawings);
+        setShapes(newShapes);
+        setDragOffset({ x: pos.x, y: pos.y });
+      } else
       if (selectedShape.type === 'group') {
         const offsetX = pos.x - dragOffset.x;
         const offsetY = pos.y - dragOffset.y;
@@ -505,13 +561,18 @@ function WhiteboardEnhanced({ workspaceId }) {
   };
 
   const deleteSelected = () => {
-    if (selectedShape !== null) {
-      if (selectedShape.type === 'group') {
-        const newShapes = shapes.filter((_, index) => !selectedShape.items.shapes.includes(index));
-        const newDrawings = drawings.filter((_, index) => !selectedShape.items.drawings.includes(index));
-        setShapes(newShapes);
-        setDrawings(newDrawings);
-      } else if (selectedShape.type === 'shape') {
+    if (selectedItems.length > 0) {
+      const shapesToDelete = selectedItems.filter(item => item.type === 'shape').map(item => item.index);
+      const drawingsToDelete = selectedItems.filter(item => item.type === 'drawing').map(item => item.index);
+      
+      const newShapes = shapes.filter((_, index) => !shapesToDelete.includes(index));
+      const newDrawings = drawings.filter((_, index) => !drawingsToDelete.includes(index));
+      
+      setShapes(newShapes);
+      setDrawings(newDrawings);
+      setSelectedItems([]);
+    } else if (selectedShape !== null) {
+      if (selectedShape.type === 'shape') {
         const newShapes = shapes.filter((_, index) => index !== selectedShape.index);
         setShapes(newShapes);
       } else if (selectedShape.type === 'drawing') {
@@ -519,8 +580,8 @@ function WhiteboardEnhanced({ workspaceId }) {
         setDrawings(newDrawings);
       }
       setSelectedShape(null);
-      redrawCanvas();
     }
+    redrawCanvas();
   };
 
   const presetColors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB'];
