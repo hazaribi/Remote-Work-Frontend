@@ -94,12 +94,26 @@ function WhiteboardEnhanced({ workspaceId }) {
   };
 
   const findShapeAtPoint = (x, y) => {
-    for (let i = shapes.length - 1; i >= 0; i--) {
-      if (isPointInShape(x, y, shapes[i])) {
-        return i;
+    // Check drawings first
+    for (let i = drawings.length - 1; i >= 0; i--) {
+      const drawing = drawings[i];
+      if (drawing.length > 0) {
+        for (let j = 0; j < drawing.length - 1; j++) {
+          const dist = distanceToLine(x, y, drawing[j].x, drawing[j].y, drawing[j + 1].x, drawing[j + 1].y);
+          if (dist <= 10) {
+            return { type: 'drawing', index: i };
+          }
+        }
       }
     }
-    return -1;
+    
+    // Then check shapes
+    for (let i = shapes.length - 1; i >= 0; i--) {
+      if (isPointInShape(x, y, shapes[i])) {
+        return { type: 'shape', index: i };
+      }
+    }
+    return null;
   };
 
   const isPointInShape = (x, y, shape) => {
@@ -139,15 +153,22 @@ function WhiteboardEnhanced({ workspaceId }) {
     setStartPos(pos);
     
     if (tool === 'select') {
-      const shapeIndex = findShapeAtPoint(pos.x, pos.y);
-      if (shapeIndex !== -1) {
-        setSelectedShape(shapeIndex);
+      const found = findShapeAtPoint(pos.x, pos.y);
+      if (found) {
+        setSelectedShape(found);
         setIsDragging(true);
-        const shape = shapes[shapeIndex];
-        setDragOffset({
-          x: pos.x - (shape.x || shape.centerX || shape.startX),
-          y: pos.y - (shape.y || shape.centerY || shape.startY)
-        });
+        if (found.type === 'shape') {
+          const shape = shapes[found.index];
+          setDragOffset({
+            x: pos.x - (shape.x || shape.centerX || shape.startX),
+            y: pos.y - (shape.y || shape.centerY || shape.startY)
+          });
+        } else {
+          const drawing = drawings[found.index];
+          if (drawing.length > 0) {
+            setDragOffset({ x: pos.x - drawing[0].x, y: pos.y - drawing[0].y });
+          }
+        }
       } else {
         setSelectedShape(null);
       }
@@ -171,31 +192,43 @@ function WhiteboardEnhanced({ workspaceId }) {
     const pos = getMousePos(e);
     
     if (tool === 'select' && isDragging && selectedShape !== null) {
-      const newShapes = [...shapes];
-      const shape = newShapes[selectedShape];
-      const newX = pos.x - dragOffset.x;
-      const newY = pos.y - dragOffset.y;
-      
-      switch (shape.type) {
-        case 'rectangle':
-          shape.x = newX;
-          shape.y = newY;
-          break;
-        case 'circle':
-          shape.centerX = newX;
-          shape.centerY = newY;
-          break;
-        case 'line':
-          const dx = shape.endX - shape.startX;
-          const dy = shape.endY - shape.startY;
-          shape.startX = newX;
-          shape.startY = newY;
-          shape.endX = newX + dx;
-          shape.endY = newY + dy;
-          break;
+      if (selectedShape.type === 'shape') {
+        const newShapes = [...shapes];
+        const shape = newShapes[selectedShape.index];
+        const newX = pos.x - dragOffset.x;
+        const newY = pos.y - dragOffset.y;
+        
+        switch (shape.type) {
+          case 'rectangle':
+            shape.x = newX;
+            shape.y = newY;
+            break;
+          case 'circle':
+            shape.centerX = newX;
+            shape.centerY = newY;
+            break;
+          case 'line':
+            const dx = shape.endX - shape.startX;
+            const dy = shape.endY - shape.startY;
+            shape.startX = newX;
+            shape.startY = newY;
+            shape.endX = newX + dx;
+            shape.endY = newY + dy;
+            break;
+        }
+        setShapes(newShapes);
+      } else if (selectedShape.type === 'drawing') {
+        const newDrawings = [...drawings];
+        const drawing = newDrawings[selectedShape.index];
+        const offsetX = pos.x - dragOffset.x - drawing[0].x;
+        const offsetY = pos.y - dragOffset.y - drawing[0].y;
+        
+        drawing.forEach(point => {
+          point.x += offsetX;
+          point.y += offsetY;
+        });
+        setDrawings(newDrawings);
       }
-      
-      setShapes(newShapes);
       redrawCanvas();
       return;
     }
@@ -206,6 +239,8 @@ function WhiteboardEnhanced({ workspaceId }) {
     if (tool === 'pen' || tool === 'eraser') {
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
       setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);
     }
   };
@@ -315,8 +350,9 @@ function WhiteboardEnhanced({ workspaceId }) {
     // Draw all shapes
     shapes.forEach((shape, index) => {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = index === selectedShape ? '#007bff' : shape.color;
-      ctx.lineWidth = shape.strokeWidth + (index === selectedShape ? 2 : 0);
+      const isSelected = selectedShape?.type === 'shape' && selectedShape.index === index;
+      ctx.strokeStyle = isSelected ? '#007bff' : shape.color;
+      ctx.lineWidth = shape.strokeWidth + (isSelected ? 2 : 0);
       
       switch (shape.type) {
         case 'rectangle':
@@ -350,10 +386,15 @@ function WhiteboardEnhanced({ workspaceId }) {
 
   const deleteSelected = () => {
     if (selectedShape !== null) {
-      const newShapes = shapes.filter((_, index) => index !== selectedShape);
-      setShapes(newShapes);
+      if (selectedShape.type === 'shape') {
+        const newShapes = shapes.filter((_, index) => index !== selectedShape.index);
+        setShapes(newShapes);
+      } else if (selectedShape.type === 'drawing') {
+        const newDrawings = drawings.filter((_, index) => index !== selectedShape.index);
+        setDrawings(newDrawings);
+      }
       setSelectedShape(null);
-      redrawCanvas(newShapes);
+      redrawCanvas();
     }
   };
 
