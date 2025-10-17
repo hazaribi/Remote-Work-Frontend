@@ -8,8 +8,13 @@ function Whiteboard({ workspaceId }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(3);
+  const [tool, setTool] = useState('pen'); // pen, eraser, line, rectangle, circle
   const [lastX, setLastX] = useState(0);
   const [lastY, setLastY] = useState(0);
+  const [startX, setStartX] = useState(0);
+  const [startY, setStartY] = useState(0);
+  const [history, setHistory] = useState([]);
+  const [historyStep, setHistoryStep] = useState(-1);
   
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
@@ -48,7 +53,7 @@ function Whiteboard({ workspaceId }) {
     });
 
     newSocket.on('whiteboard_draw', (data) => {
-      drawRemoteLine(data.line);
+      handleRemoteAction(data);
     });
 
     newSocket.on('whiteboard_clear', () => {
@@ -63,9 +68,16 @@ function Whiteboard({ workspaceId }) {
     const { offsetX, offsetY } = getMousePos(e);
     setLastX(offsetX);
     setLastY(offsetY);
+    setStartX(offsetX);
+    setStartY(offsetY);
     
-    ctxRef.current.beginPath();
-    ctxRef.current.moveTo(offsetX, offsetY);
+    if (tool === 'pen' || tool === 'eraser') {
+      ctxRef.current.beginPath();
+      ctxRef.current.moveTo(offsetX, offsetY);
+    }
+    
+    // Save state for undo
+    saveState();
   };
 
   const draw = (e) => {
@@ -74,34 +86,123 @@ function Whiteboard({ workspaceId }) {
     const { offsetX, offsetY } = getMousePos(e);
     const ctx = ctxRef.current;
     
-    ctx.strokeStyle = color;
-    ctx.lineWidth = brushSize;
-    ctx.lineTo(offsetX, offsetY);
-    ctx.stroke();
-    
-    if (socket) {
-      socket.emit('whiteboard_draw', {
-        workspaceId,
-        line: {
-          fromX: lastX,
-          fromY: lastY,
-          toX: offsetX,
-          toY: offsetY,
-          color,
-          width: brushSize
-        }
-      });
+    if (tool === 'pen') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.lineTo(offsetX, offsetY);
+      ctx.stroke();
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'draw',
+          data: {
+            fromX: lastX,
+            fromY: lastY,
+            toX: offsetX,
+            toY: offsetY,
+            color,
+            width: brushSize,
+            tool: 'pen'
+          }
+        });
+      }
+    } else if (tool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = brushSize * 2;
+      ctx.lineTo(offsetX, offsetY);
+      ctx.stroke();
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'erase',
+          data: {
+            fromX: lastX,
+            fromY: lastY,
+            toX: offsetX,
+            toY: offsetY,
+            width: brushSize * 2
+          }
+        });
+      }
     }
     
     setLastX(offsetX);
     setLastY(offsetY);
   };
 
-  const stopDrawing = () => {
-    if (isDrawing) {
-      setIsDrawing(false);
-      ctxRef.current.beginPath();
+  const stopDrawing = (e) => {
+    if (!isDrawing) return;
+    
+    const { offsetX, offsetY } = getMousePos(e);
+    const ctx = ctxRef.current;
+    
+    if (tool === 'line') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(offsetX, offsetY);
+      ctx.stroke();
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'shape',
+          data: {
+            type: 'line',
+            startX, startY,
+            endX: offsetX, endY: offsetY,
+            color, width: brushSize
+          }
+        });
+      }
+    } else if (tool === 'rectangle') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.strokeRect(startX, startY, offsetX - startX, offsetY - startY);
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'shape',
+          data: {
+            type: 'rectangle',
+            startX, startY,
+            width: offsetX - startX,
+            height: offsetY - startY,
+            color, strokeWidth: brushSize
+          }
+        });
+      }
+    } else if (tool === 'circle') {
+      const radius = Math.sqrt(Math.pow(offsetX - startX, 2) + Math.pow(offsetY - startY, 2));
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = brushSize;
+      ctx.beginPath();
+      ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+      ctx.stroke();
+      
+      if (socket) {
+        socket.emit('whiteboard_draw', {
+          workspaceId,
+          action: 'shape',
+          data: {
+            type: 'circle',
+            centerX: startX, centerY: startY,
+            radius, color, strokeWidth: brushSize
+          }
+        });
+      }
     }
+    
+    setIsDrawing(false);
+    ctxRef.current.beginPath();
   };
 
   const getMousePos = (e) => {
@@ -129,14 +230,42 @@ function Whiteboard({ workspaceId }) {
     stopDrawing();
   };
 
-  const drawRemoteLine = (line) => {
+  const handleRemoteAction = (data) => {
     const ctx = ctxRef.current;
-    ctx.strokeStyle = line.color;
-    ctx.lineWidth = line.width;
-    ctx.beginPath();
-    ctx.moveTo(line.fromX, line.fromY);
-    ctx.lineTo(line.toX, line.toY);
-    ctx.stroke();
+    
+    if (data.action === 'draw') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = data.data.color;
+      ctx.lineWidth = data.data.width;
+      ctx.beginPath();
+      ctx.moveTo(data.data.fromX, data.data.fromY);
+      ctx.lineTo(data.data.toX, data.data.toY);
+      ctx.stroke();
+    } else if (data.action === 'erase') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = data.data.width;
+      ctx.beginPath();
+      ctx.moveTo(data.data.fromX, data.data.fromY);
+      ctx.lineTo(data.data.toX, data.data.toY);
+      ctx.stroke();
+    } else if (data.action === 'shape') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = data.data.color;
+      ctx.lineWidth = data.data.strokeWidth;
+      
+      if (data.data.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(data.data.startX, data.data.startY);
+        ctx.lineTo(data.data.endX, data.data.endY);
+        ctx.stroke();
+      } else if (data.data.type === 'rectangle') {
+        ctx.strokeRect(data.data.startX, data.data.startY, data.data.width, data.data.height);
+      } else if (data.data.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(data.data.centerX, data.data.centerY, data.data.radius, 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+    }
   };
 
   const clearCanvas = () => {
@@ -151,6 +280,39 @@ function Whiteboard({ workspaceId }) {
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   };
 
+  const saveState = () => {
+    const canvas = canvasRef.current;
+    const dataURL = canvas.toDataURL();
+    const newHistory = history.slice(0, historyStep + 1);
+    newHistory.push(dataURL);
+    setHistory(newHistory);
+    setHistoryStep(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyStep > 0) {
+      setHistoryStep(historyStep - 1);
+      const img = new Image();
+      img.onload = () => {
+        ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctxRef.current.drawImage(img, 0, 0);
+      };
+      img.src = history[historyStep - 1];
+    }
+  };
+
+  const redo = () => {
+    if (historyStep < history.length - 1) {
+      setHistoryStep(historyStep + 1);
+      const img = new Image();
+      img.onload = () => {
+        ctxRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctxRef.current.drawImage(img, 0, 0);
+      };
+      img.src = history[historyStep + 1];
+    }
+  };
+
   const exportImage = () => {
     const canvas = canvasRef.current;
     const link = document.createElement('a');
@@ -158,6 +320,8 @@ function Whiteboard({ workspaceId }) {
     link.href = canvas.toDataURL();
     link.click();
   };
+
+  const presetColors = ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080', '#FFC0CB'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
