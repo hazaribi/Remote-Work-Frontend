@@ -116,6 +116,45 @@ function WhiteboardEnhanced({ workspaceId }) {
     return null;
   };
 
+  const findItemsInArea = (shape) => {
+    const items = { drawings: [], shapes: [] };
+    
+    // Check drawings
+    drawings.forEach((drawing, index) => {
+      if (drawing.length > 0) {
+        const isInside = drawing.some(point => isPointInShape(point.x, point.y, shape));
+        if (isInside) {
+          items.drawings.push(index);
+        }
+      }
+    });
+    
+    // Check shapes
+    shapes.forEach((shapeItem, index) => {
+      let isInside = false;
+      
+      switch (shapeItem.type) {
+        case 'rectangle':
+          isInside = isPointInShape(shapeItem.x, shapeItem.y, shape) ||
+                    isPointInShape(shapeItem.x + shapeItem.width, shapeItem.y + shapeItem.height, shape);
+          break;
+        case 'circle':
+          isInside = isPointInShape(shapeItem.centerX, shapeItem.centerY, shape);
+          break;
+        case 'line':
+          isInside = isPointInShape(shapeItem.startX, shapeItem.startY, shape) ||
+                    isPointInShape(shapeItem.endX, shapeItem.endY, shape);
+          break;
+      }
+      
+      if (isInside) {
+        items.shapes.push(index);
+      }
+    });
+    
+    return items;
+  };
+
   const isPointInShape = (x, y, shape) => {
     switch (shape.type) {
       case 'rectangle':
@@ -192,7 +231,43 @@ function WhiteboardEnhanced({ workspaceId }) {
     const pos = getMousePos(e);
     
     if (tool === 'select' && isDragging && selectedShape !== null) {
-      if (selectedShape.type === 'shape') {
+      if (selectedShape.type === 'group') {
+        const offsetX = pos.x - dragOffset.x;
+        const offsetY = pos.y - dragOffset.y;
+        
+        const newDrawings = [...drawings];
+        selectedShape.items.drawings.forEach(index => {
+          newDrawings[index].forEach(point => {
+            point.x += offsetX;
+            point.y += offsetY;
+          });
+        });
+        setDrawings(newDrawings);
+        
+        const newShapes = [...shapes];
+        selectedShape.items.shapes.forEach(index => {
+          const shape = newShapes[index];
+          switch (shape.type) {
+            case 'rectangle':
+              shape.x += offsetX;
+              shape.y += offsetY;
+              break;
+            case 'circle':
+              shape.centerX += offsetX;
+              shape.centerY += offsetY;
+              break;
+            case 'line':
+              shape.startX += offsetX;
+              shape.startY += offsetY;
+              shape.endX += offsetX;
+              shape.endY += offsetY;
+              break;
+          }
+        });
+        setShapes(newShapes);
+        
+        setDragOffset({ x: pos.x, y: pos.y });
+      } else if (selectedShape.type === 'shape') {
         const newShapes = [...shapes];
         const shape = newShapes[selectedShape.index];
         const newX = pos.x - dragOffset.x;
@@ -293,6 +368,15 @@ function WhiteboardEnhanced({ workspaceId }) {
     }
     
     if (newShape) {
+      if (tool === 'rectangle' || tool === 'circle') {
+        const itemsInArea = findItemsInArea(newShape);
+        if (itemsInArea.drawings.length > 0 || itemsInArea.shapes.length > 0) {
+          setSelectedShape({ type: 'group', items: itemsInArea });
+          redrawCanvas();
+          return;
+        }
+      }
+      
       const newShapes = [...shapes, newShape];
       setShapes(newShapes);
       
@@ -431,7 +515,12 @@ function WhiteboardEnhanced({ workspaceId }) {
 
   const deleteSelected = () => {
     if (selectedShape !== null) {
-      if (selectedShape.type === 'shape') {
+      if (selectedShape.type === 'group') {
+        const newShapes = shapes.filter((_, index) => !selectedShape.items.shapes.includes(index));
+        const newDrawings = drawings.filter((_, index) => !selectedShape.items.drawings.includes(index));
+        setShapes(newShapes);
+        setDrawings(newDrawings);
+      } else if (selectedShape.type === 'shape') {
         const newShapes = shapes.filter((_, index) => index !== selectedShape.index);
         setShapes(newShapes);
       } else if (selectedShape.type === 'drawing') {
