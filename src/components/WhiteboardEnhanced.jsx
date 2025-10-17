@@ -209,9 +209,7 @@ function WhiteboardEnhanced({ workspaceId }) {
           }
         }
       } else {
-        // Start area selection
         setSelectedShape(null);
-        setIsDrawing(true);
       }
       redrawCanvas();
       return;
@@ -391,21 +389,6 @@ function WhiteboardEnhanced({ workspaceId }) {
           data: currentDrawing
         });
       }
-    } else if (tool === 'select' && !selectedShape && isDrawing) {
-      // Create selection area
-      const selectionArea = {
-        type: 'rectangle',
-        x: Math.min(startPos.x, pos.x),
-        y: Math.min(startPos.y, pos.y),
-        width: Math.abs(pos.x - startPos.x),
-        height: Math.abs(pos.y - startPos.y)
-      };
-      
-      const itemsInArea = findItemsInArea(selectionArea);
-      if (itemsInArea.drawings.length > 0 || itemsInArea.shapes.length > 0) {
-        setSelectedShape({ type: 'group', items: itemsInArea });
-      }
-      redrawCanvas();
     }
     
     setIsDrawing(false);
