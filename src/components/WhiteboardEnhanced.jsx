@@ -67,10 +67,11 @@ function WhiteboardEnhanced({ workspaceId }) {
     newSocket.on('whiteboard_draw', (data) => {
       if (data.action === 'shape') {
         setShapes(prev => [...prev, data.data]);
+        redrawCanvas();
       } else if (data.action === 'drawing') {
         setDrawings(prev => [...prev, data.data]);
+        redrawCanvas();
       }
-      redrawCanvas();
     });
 
     newSocket.on('whiteboard_clear', () => {
@@ -156,8 +157,12 @@ function WhiteboardEnhanced({ workspaceId }) {
     
     setIsDrawing(true);
     if (tool === 'pen' || tool === 'eraser') {
-      ctxRef.current.beginPath();
-      ctxRef.current.moveTo(pos.x, pos.y);
+      const ctx = ctxRef.current;
+      ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = tool === 'eraser' ? brushSize * 2 : brushSize;
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
       setCurrentDrawing([{ x: pos.x, y: pos.y, tool, color, brushSize }]);
     }
   };
@@ -198,16 +203,7 @@ function WhiteboardEnhanced({ workspaceId }) {
     if (!isDrawing) return;
     
     const ctx = ctxRef.current;
-    if (tool === 'pen') {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = brushSize;
-      ctx.lineTo(pos.x, pos.y);
-      ctx.stroke();
-      setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);
-    } else if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth = brushSize * 2;
+    if (tool === 'pen' || tool === 'eraser') {
       ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
       setCurrentDrawing(prev => [...prev, { x: pos.x, y: pos.y, tool, color, brushSize }]);

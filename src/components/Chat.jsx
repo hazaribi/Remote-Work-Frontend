@@ -127,6 +127,43 @@ function Chat({ workspaceId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const formatMessageDate = (dateString) => {
+    const messageDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (messageDate.toDateString() === today.toDateString()) {
+      return 'Today';
+    } else if (messageDate.toDateString() === yesterday.toDateString()) {
+      return 'Yesterday';
+    } else {
+      return messageDate.toLocaleDateString();
+    }
+  };
+
+  const groupMessagesByDate = (messages) => {
+    const groups = [];
+    let currentGroup = null;
+    
+    messages.forEach(message => {
+      const messageDate = new Date(message.created_at).toDateString();
+      
+      if (!currentGroup || currentGroup.date !== messageDate) {
+        currentGroup = {
+          date: messageDate,
+          dateLabel: formatMessageDate(message.created_at),
+          messages: []
+        };
+        groups.push(currentGroup);
+      }
+      
+      currentGroup.messages.push(message);
+    });
+    
+    return groups;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -149,61 +186,70 @@ function Chat({ workspaceId }) {
                 <p className="text-gray-500">No messages yet. Start the conversation!</p>
               </div>
             ) : (
-              messages.map((message) => {
-                const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-                const isOwnMessage = message.sender_id === currentUser.id || message.users?.id === currentUser.id;
-                
-                return (
-                  <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex items-start space-x-3 max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                      <div className="flex-shrink-0">
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${
-                          isOwnMessage 
-                            ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
-                            : 'bg-gradient-to-br from-purple-500 to-purple-600'
-                        }`}>
-                          {(message.users?.full_name || message.sender?.full_name || 'Unknown')?.charAt(0)}
-                        </div>
-                      </div>
-                      <div className={`flex-1 ${isOwnMessage ? 'text-right' : ''}`}>
-                        <div className={`flex items-center space-x-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
-                          <span className="text-sm font-medium text-gray-900">
-                            {isOwnMessage ? 'You' : (message.users?.full_name || message.sender?.full_name || 'Unknown User')}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(message.created_at).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <div className={`inline-block px-4 py-2 rounded-2xl shadow-sm ${
-                          isOwnMessage 
-                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
-                            : 'bg-white border border-gray-200 text-gray-900'
-                        }`}>
-                          {message.messageType === 'file' ? (
-                            <div className="flex items-center space-x-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                              </svg>
-                              <a 
-                                href={message.fileUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={`text-sm underline hover:no-underline ${
-                                  isOwnMessage ? 'text-blue-100' : 'text-blue-600'
-                                }`}
-                              >
-                                {message.fileName || 'Download File'}
-                              </a>
-                            </div>
-                          ) : (
-                            <p className="text-sm">{message.content}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+              groupMessagesByDate(messages).map((group, groupIndex) => (
+                <div key={groupIndex}>
+                  <div className="flex justify-center my-4">
+                    <span className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded-full">
+                      {group.dateLabel}
+                    </span>
                   </div>
-                );
-              })
+                  {group.messages.map((message) => {
+                    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                    const isOwnMessage = message.sender_id === currentUser.id || message.users?.id === currentUser.id;
+                    
+                    return (
+                      <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4`}>
+                        <div className={`flex items-start space-x-3 max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                          <div className="flex-shrink-0">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white font-bold ${
+                              isOwnMessage 
+                                ? 'bg-gradient-to-br from-blue-500 to-blue-600' 
+                                : 'bg-gradient-to-br from-purple-500 to-purple-600'
+                            }`}>
+                              {(message.users?.full_name || message.sender?.full_name || 'Unknown')?.charAt(0)}
+                            </div>
+                          </div>
+                          <div className={`flex-1 ${isOwnMessage ? 'text-right' : ''}`}>
+                            <div className={`flex items-center space-x-2 mb-1 ${isOwnMessage ? 'justify-end' : ''}`}>
+                              <span className="text-sm font-medium text-gray-900">
+                                {isOwnMessage ? 'You' : (message.users?.full_name || message.sender?.full_name || 'Unknown User')}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className={`inline-block px-4 py-2 rounded-2xl shadow-sm ${
+                              isOwnMessage 
+                                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white' 
+                                : 'bg-white border border-gray-200 text-gray-900'
+                            }`}>
+                              {message.messageType === 'file' ? (
+                                <div className="flex items-center space-x-2">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                  </svg>
+                                  <a 
+                                    href={message.fileUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className={`text-sm underline hover:no-underline ${
+                                      isOwnMessage ? 'text-blue-100' : 'text-blue-600'
+                                    }`}
+                                  >
+                                    {message.fileName || 'Download File'}
+                                  </a>
+                                </div>
+                              ) : (
+                                <p className="text-sm">{message.content}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             )}
             <div ref={messagesEndRef} />
           </div>
