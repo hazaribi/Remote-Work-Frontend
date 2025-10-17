@@ -15,6 +15,8 @@ function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [videoDropdownOpen, setVideoDropdownOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -48,9 +50,6 @@ function App() {
   if (!user) {
     return <Auth onLogin={handleLogin} />;
   }
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [videoDropdownOpen, setVideoDropdownOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex">
