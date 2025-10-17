@@ -319,7 +319,6 @@ function WhiteboardEnhanced({ workspaceId }) {
     setIsDrawing(false);
     setCurrentDrawing([]);
     ctxRef.current.beginPath();
-    redrawCanvas();
   };
 
   const drawPreview = (ctx, start, end) => {
@@ -451,7 +450,7 @@ function WhiteboardEnhanced({ workspaceId }) {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            Enhanced Whiteboard
+            Whiteboard
           </h1>
           <p className="text-gray-600">Draw, select, drag, and create shapes collaboratively</p>
         </div>
